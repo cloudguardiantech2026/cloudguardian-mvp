@@ -1,0 +1,8 @@
+{
+  "S3_PUBLIC": true,
+  "ROOT_MFA_DISABLED": false,
+  "SG_SSH_OPEN": false,
+  "SG_RDP_OPEN": false,
+  "SG_MYSQL_OPEN": false,
+  "SG_POSTGRES_OPEN": false
+}
