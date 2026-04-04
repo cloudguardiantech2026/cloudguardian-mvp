@@ -4,6 +4,8 @@ controls:
     logic: "ALL"
     requires:
       - ROOT_MFA_DISABLED
+    severity: "HIGH"
+    weight: 35
     plain_english_fail: "Multi-Factor Authentication is not fully enforced."
     risk: "Without MFA, a compromised password could allow unauthorized administrative access."
     recommendation: "Enable MFA for the AWS root account and any privileged users."
@@ -13,6 +15,8 @@ controls:
     logic: "ANY_FAIL"
     requires:
       - S3_PUBLIC
+    severity: "HIGH"
+    weight: 35
     plain_english_fail: "One or more storage resources are publicly accessible."
     risk: "Sensitive business data may be exposed to the internet."
     recommendation: "Disable public access on S3 buckets and enable Block Public Access settings."
@@ -25,6 +29,8 @@ controls:
       - SG_RDP_OPEN
       - SG_MYSQL_OPEN
       - SG_POSTGRES_OPEN
+    severity: "MEDIUM"
+    weight: 30
     plain_english_fail: "One or more critical network ports are exposed to the internet."
     risk: "Unrestricted inbound access increases the chance of brute-force attacks or unauthorized access."
     recommendation: "Restrict security group access so critical ports are not open to 0.0.0.0/0."

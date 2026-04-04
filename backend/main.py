@@ -5,6 +5,7 @@ from scanners.aws_iam import get_iam_signals
 from scanners.aws_network import get_network_signals
 from engine.framework_engine import load_controls, evaluate_controls
 from reports.pdf_generator import generate_control_pdf
+from engine.framework_engine import load_controls, evaluate_controls, calculate_compliance_score
 
 
 signals = {}
@@ -21,11 +22,15 @@ for key, value in signals.items():
 
 controls = load_controls()
 results = evaluate_controls(signals, controls)
+score_data = calculate_compliance_score(results)
+
+print("\n=== Compliance Summary ===\n")
+print(f"Overall Compliance Score: {score_data['score']}%")
+print(f"Risk Level: {score_data['risk_level']}")
 
 print("\n=== Compliance Results ===\n")
-
 for cid, data in results.items():
-    print(f"{cid} - {data['name']}: {data['status']}")
+    print(f"{cid} - {data['name']}: {data['status']} [{data['severity']}]")
 
     if data["status"] == "FAIL":
         print(f"  Reason: {data['plain_english_fail']}")
@@ -42,7 +47,7 @@ else:
     for change in drift:
         print(f"{change['type']}: {change['signal']} changed from {change['from']} → {change['to']}")
 
-pdf_path = generate_control_pdf(results)
+pdf_path = generate_control_pdf(results, score_data)
 print(f"\nEvidence pack generated: {pdf_path}")
 
 print("\n=== Conversational Compliance Engine ===")
@@ -54,7 +59,7 @@ while True:
         print("Exiting CloudGuardian conversation.")
         break
 
-    response = handle_query(user_query, results, drift)
+    response = handle_query(user_query, results, drift, score_data)
     print("\n" + response + "\n")
 
 save_current_state(signals)

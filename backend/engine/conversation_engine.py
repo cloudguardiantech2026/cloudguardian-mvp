@@ -1,4 +1,4 @@
-def handle_query(query, results, drift):
+def handle_query(query, results, drift, score_data):
     q = query.strip().lower()
 
     if q in ["help", "?"]:
@@ -9,7 +9,14 @@ def handle_query(query, results, drift):
             "- why did ce_2_1 fail\n"
             "- why did ce_1_2 fail\n"
             "- what changed\n"
+            "- show compliance score\n"
             "- exit"
+        )
+    
+    if q == "show compliance score":
+        return (
+            f"Overall Compliance Score: {score_data['score']}%\n"
+            f"Risk Level: {score_data['risk_level']}"
         )
 
     if q == "show failed controls":

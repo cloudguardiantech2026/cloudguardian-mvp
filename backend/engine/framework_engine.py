@@ -24,16 +24,16 @@ def evaluate_controls(signals, controls):
 
         if logic == "ALL":
             status = all(not signals.get(sig, False) for sig in required_signals)
-
         elif logic == "ANY_FAIL":
             status = not any(signals.get(sig, False) for sig in required_signals)
-
         else:
             status = False
 
         results[control_id] = {
             "name": control["name"],
             "status": "PASS" if status else "FAIL",
+            "severity": control.get("severity", "MEDIUM"),
+            "weight": control.get("weight", 0),
             "signals_checked": required_signals,
             "triggered_signals": triggered_signals,
             "signal_states": signal_states,
@@ -43,3 +43,36 @@ def evaluate_controls(signals, controls):
         }
 
     return results
+
+
+def calculate_compliance_score(results):
+    total_weight = sum(item.get("weight", 0) for item in results.values())
+    passed_weight = sum(
+        item.get("weight", 0) for item in results.values() if item["status"] == "PASS"
+    )
+
+    if total_weight == 0:
+        score = 0
+    else:
+        score = round((passed_weight / total_weight) * 100, 2)
+
+    failed_high = any(
+        item["status"] == "FAIL" and item.get("severity") == "HIGH"
+        for item in results.values()
+    )
+    failed_medium = any(
+        item["status"] == "FAIL" and item.get("severity") == "MEDIUM"
+        for item in results.values()
+    )
+
+    if failed_high:
+        risk_level = "HIGH"
+    elif failed_medium:
+        risk_level = "MEDIUM"
+    else:
+        risk_level = "LOW"
+
+    return {
+        "score": score,
+        "risk_level": risk_level
+    }

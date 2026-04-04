@@ -177,3 +177,29 @@ CloudGuardian now includes a conversational query layer on top of the compliance
 ### Significance
 The conversational engine does not replace the compliance model. It acts as an accessible interface to framework-level compliance reasoning, making control outcomes understandable to SMEs and reviewers.
 
+## Compliance Scoring Engine
+
+### Summary
+CloudGuardian now calculates a weighted compliance score and overall risk level based on evaluated controls.
+
+### Enhancements
+Each control now contains:
+- severity
+- weight
+
+### Output
+The framework engine now produces:
+- PASS / FAIL
+- severity
+- control weight
+- overall compliance score
+- overall risk level
+
+### Scoring Logic
+- Passed controls contribute their full weight
+- Failed controls reduce the total score
+- High-severity failures drive the overall risk level
+
+### Significance
+This shifts CloudGuardian from binary pass/fail reporting into risk-informed compliance intelligence, making the platform more useful for SME decision-making and reviewer assessment.
+
