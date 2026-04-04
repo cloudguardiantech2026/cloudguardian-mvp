@@ -1,14 +1,16 @@
 controls:
   CE_1_2:
     name: "Multi-Factor Authentication"
-    logic: "ALL"
+    logic: "ANY_FAIL"
     requires:
       - ROOT_MFA_DISABLED
+      - IAM_USER_MFA_MISSING
+      - IAM_USER_ADMIN_POLICY
     severity: "HIGH"
     weight: 35
-    plain_english_fail: "Multi-Factor Authentication is not fully enforced."
-    risk: "Without MFA, a compromised password could allow unauthorized administrative access."
-    recommendation: "Enable MFA for the AWS root account and any privileged users."
+    plain_english_fail: "Multi-Factor Authentication or privileged access controls are not fully enforced."
+    risk: "Without MFA or with excessive user permissions, a compromised account could lead to unauthorized administrative access."
+    recommendation: "Enable MFA for the AWS root account, enforce MFA for IAM users, and avoid assigning admin-level permissions directly to users."
 
   CE_2_1:
     name: "Secure Configuration"

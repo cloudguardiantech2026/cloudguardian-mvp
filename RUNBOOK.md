@@ -203,3 +203,17 @@ The framework engine now produces:
 ### Significance
 This shifts CloudGuardian from binary pass/fail reporting into risk-informed compliance intelligence, making the platform more useful for SME decision-making and reviewer assessment.
 
+## IAM Depth Enhancement
+
+### Summary
+CloudGuardian now evaluates not only root account MFA, but also IAM user MFA coverage and direct administrator policy assignment.
+
+### Signals Added
+- IAM_USER_MFA_MISSING
+- IAM_USER_ADMIN_POLICY
+
+### Impact
+This strengthens CE_1_2 by expanding the control from a single root-account signal to broader user access control validation.
+
+### Significance
+This makes CloudGuardian’s access-control modelling more aligned with real SME cloud identity risks.
