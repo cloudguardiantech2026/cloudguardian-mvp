@@ -156,3 +156,24 @@ CloudGuardian can explain not only whether a control failed, but also:
 ### Significance
 This strengthens the platform’s differentiation by turning compliance logic into understandable regulatory advice for SMEs.
 
+### First-Run Behavior
+If no previous snapshot exists, CloudGuardian initializes with an empty state and creates a baseline snapshot after the first scan.
+
+## Conversational Compliance Engine
+
+### Summary
+CloudGuardian now includes a conversational query layer on top of the compliance engine.
+
+### Implemented File
+- `backend/engine/conversation_engine.py`
+
+### Supported Queries
+- show failed controls
+- show passed controls
+- why did CE_x_x fail
+- what changed
+- help
+
+### Significance
+The conversational engine does not replace the compliance model. It acts as an accessible interface to framework-level compliance reasoning, making control outcomes understandable to SMEs and reviewers.
+
