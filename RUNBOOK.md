@@ -262,3 +262,17 @@ CloudGuardian now includes a lightweight Flask-based user interface for SMEs and
 
 ### Significance
 The UI makes CloudGuardian easier to demonstrate to non-technical users and strengthens product usability for SME validation and endorsement review.
+## PDF Download in UI
+
+### Summary
+CloudGuardian now supports direct evidence pack download from the Flask UI.
+
+### Implementation
+- Added `/download-pdf` route in `app.py`
+- Updated UI to expose a direct download button
+
+### Outcome
+SMEs and reviewers can now download the assessor-ready PDF evidence pack directly from the browser without needing to navigate the filesystem.
+
+### Significance
+This improves product usability and makes the MVP feel more like a real SaaS workflow.

@@ -91,11 +91,12 @@
         </div>
 
         {% if pdf_path %}
-        <div class="card">
-            <h2>Evidence Pack</h2>
-            <p>Generated at: {{ pdf_path }}</p>
-        </div>
-        {% endif %}
+<div class="card">
+    <h2>Evidence Pack</h2>
+    <p>Your assessor-ready evidence pack has been generated.</p>
+    <a href="{{ url_for('download_pdf') }}" class="btn">Download PDF Evidence Pack</a>
+</div>
+{% endif %}
     </div>
 </body>
 </html>
