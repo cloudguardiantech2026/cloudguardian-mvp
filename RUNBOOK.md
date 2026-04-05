@@ -241,3 +241,24 @@ This strengthens CE_3_1 by moving from simple port checks to broader internet-re
 
 ### Significance
 This makes CloudGuardian’s network evaluation more realistic and more aligned with how cloud exposure actually occurs in AWS.
+
+## Flask Frontend UI
+
+### Summary
+CloudGuardian now includes a lightweight Flask-based user interface for SMEs and reviewers.
+
+### Implemented Files
+- `app.py`
+- `templates/index.html`
+- `static/style.css`
+
+### UI Features
+- Run compliance scan
+- Display compliance score
+- Display risk level
+- Show control-by-control results
+- Show drift detection
+- Support conversational queries
+
+### Significance
+The UI makes CloudGuardian easier to demonstrate to non-technical users and strengthens product usability for SME validation and endorsement review.

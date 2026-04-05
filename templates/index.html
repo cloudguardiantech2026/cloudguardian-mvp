@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudGuardian</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>CloudGuardian</h1>
+        <p class="subtitle">Compliance Modelling Platform for Cyber Essentials</p>
+
+        <div class="card">
+            <form method="POST">
+                <button type="submit" name="action" value="scan" class="btn">Run Compliance Scan</button>
+            </form>
+        </div>
+
+        {% if score_data %}
+        <div class="grid">
+            <div class="card">
+                <h2>Compliance Score</h2>
+                <div class="score">{{ score_data.score }}%</div>
+            </div>
+            <div class="card">
+                <h2>Risk Level</h2>
+                <div class="risk {{ score_data.risk_level|lower }}">{{ score_data.risk_level }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if results %}
+        <div class="card">
+            <h2>Control Results</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Control</th>
+                        <th>Status</th>
+                        <th>Severity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cid, data in results.items() %}
+                    <tr>
+                        <td>
+                            <strong>{{ cid }}</strong><br>
+                            {{ data.name }}
+                            {% if data.status == "FAIL" %}
+                            <div class="detail">
+                                <p><strong>Reason:</strong> {{ data.plain_english_fail }}</p>
+                                <p><strong>Risk:</strong> {{ data.risk }}</p>
+                                <p><strong>Recommendation:</strong> {{ data.recommendation }}</p>
+                                <p><strong>Triggered Signals:</strong> {{ data.triggered_signals|join(', ') }}</p>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td class="{{ data.status|lower }}">{{ data.status }}</td>
+                        <td>{{ data.severity }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if drift %}
+        <div class="card">
+            <h2>Drift Detection</h2>
+            <ul>
+                {% for item in drift %}
+                <li>{{ item.type }}: {{ item.signal }} changed from {{ item.from }} to {{ item.to }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <h2>Ask CloudGuardian</h2>
+            <form method="POST">
+                <input type="text" name="query" placeholder="e.g. why did ce_2_1 fail" required>
+                <button type="submit" name="action" value="ask" class="btn">Ask</button>
+            </form>
+
+            {% if response %}
+            <div class="response">
+                <pre>{{ response }}</pre>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if pdf_path %}
+        <div class="card">
+            <h2>Evidence Pack</h2>
+            <p>Generated at: {{ pdf_path }}</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
