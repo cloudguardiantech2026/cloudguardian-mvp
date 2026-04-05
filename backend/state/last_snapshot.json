@@ -1,8 +1,14 @@
 {
   "S3_PUBLIC": true,
   "ROOT_MFA_DISABLED": false,
-  "SG_SSH_OPEN": false,
+  "IAM_USER_MFA_MISSING": true,
+  "IAM_USER_ADMIN_POLICY": true,
+  "SG_SSH_OPEN": true,
   "SG_RDP_OPEN": false,
   "SG_MYSQL_OPEN": false,
-  "SG_POSTGRES_OPEN": false
+  "SG_POSTGRES_OPEN": false,
+  "IGW_ATTACHED": true,
+  "PUBLIC_ROUTE_EXISTS": true,
+  "EC2_PUBLIC_IP_PRESENT": true,
+  "PUBLIC_EXPOSURE": true
 }

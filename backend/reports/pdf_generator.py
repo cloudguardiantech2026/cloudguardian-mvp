@@ -53,9 +53,28 @@ def generate_control_pdf(results, score_data, framework_name="Cyber Essentials",
         pdf.set_font("Arial", "", 11)
 
         if data["status"] == "FAIL":
-            pdf.multi_cell(0, 7, f"Reason: {data['plain_english_fail']}")
-            pdf.multi_cell(0, 7, f"Risk: {data['risk']}")
-            pdf.multi_cell(0, 7, f"Recommendation: {data['recommendation']}")
+            pdf.set_font("Arial", "B", 11)
+            pdf.cell(0, 7, "Issue Summary:", ln=1)
+
+            pdf.set_font("Arial", "", 11)
+            pdf.multi_cell(0, 7, f"{data['plain_english_fail']}")
+
+            pdf.set_font("Arial", "B", 11)
+            pdf.cell(0, 7, "Risk Impact:", ln=1)
+
+            pdf.set_font("Arial", "", 11)
+            pdf.multi_cell(0, 7, f"{data['risk']}")
+
+            pdf.set_font("Arial", "B", 11)
+            pdf.cell(0, 7, "Recommended Action:", ln=1)
+
+            pdf.set_font("Arial", "", 11)
+            pdf.multi_cell(0, 7, f"{data['recommendation']}")
+
+            pdf.set_font("Arial", "B", 11)
+            pdf.cell(0, 7, "Technical Evidence:", ln=1)
+
+            pdf.set_font("Arial", "", 11)
             pdf.multi_cell(0, 7, f"Triggered Signals: {', '.join(data['triggered_signals'])}")
         else:
             pdf.multi_cell(0, 7, "Status Explanation: No failing signals detected for this control.")
