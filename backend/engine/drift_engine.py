@@ -29,7 +29,7 @@ def detect_drift(old_signals, new_signals):
     all_keys = set(old_signals.keys()).union(new_signals.keys())
 
     for key in all_keys:
-        old_val = old_signals.get(key)
+        old_val = old_signals.get(key, False)
         new_val = new_signals.get(key)
 
         if old_val != new_val:

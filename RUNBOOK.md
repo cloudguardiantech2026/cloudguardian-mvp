@@ -217,3 +217,27 @@ This strengthens CE_1_2 by expanding the control from a single root-account sign
 
 ### Significance
 This makes CloudGuardian’s access-control modelling more aligned with real SME cloud identity risks.
+
+## Advanced Network Detection
+
+### Summary
+CloudGuardian now evaluates not only security group exposure, but also higher-level public network reachability indicators.
+
+### Signals Added
+- IGW_ATTACHED
+- PUBLIC_ROUTE_EXISTS
+- EC2_PUBLIC_IP_PRESENT
+- PUBLIC_EXPOSURE
+
+### Logic
+The scanner now correlates:
+- internet gateway presence
+- default public routing
+- public IP assignment
+- security group exposure
+
+### Impact
+This strengthens CE_3_1 by moving from simple port checks to broader internet-reachability modelling.
+
+### Significance
+This makes CloudGuardian’s network evaluation more realistic and more aligned with how cloud exposure actually occurs in AWS.

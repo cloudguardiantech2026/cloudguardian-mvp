@@ -31,8 +31,9 @@ controls:
       - SG_RDP_OPEN
       - SG_MYSQL_OPEN
       - SG_POSTGRES_OPEN
-    severity: "MEDIUM"
+      - PUBLIC_EXPOSURE
+    severity: "HIGH"
     weight: 30
-    plain_english_fail: "One or more critical network ports are exposed to the internet."
-    risk: "Unrestricted inbound access increases the chance of brute-force attacks or unauthorized access."
-    recommendation: "Restrict security group access so critical ports are not open to 0.0.0.0/0."
+    plain_english_fail: "One or more workloads appear reachable from the public internet through network exposure or public routing."
+    risk: "Publicly reachable systems increase the likelihood of unauthorized access, scanning, and brute-force attacks."
+    recommendation: "Restrict security group rules, review route tables, avoid unnecessary public IP assignment, and ensure only intended services are internet-facing."
