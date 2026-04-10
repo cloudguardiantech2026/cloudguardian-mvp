@@ -6,7 +6,10 @@ def load_controls(path="backend/mappings/framework_controls.yaml"):
         return yaml.safe_load(f)["controls"]
 
 
-def evaluate_controls(signals, controls):
+def evaluate_controls(signals, controls, resources_map=None):
+    if resources_map is None:
+        resources_map = {}
+
     results = {}
 
     for control_id, control in controls.items():
@@ -15,12 +18,14 @@ def evaluate_controls(signals, controls):
 
         triggered_signals = []
         signal_states = {}
+        affected_resources = []
 
         for sig in required_signals:
             value = signals.get(sig, False)
             signal_states[sig] = value
             if value is True:
                 triggered_signals.append(sig)
+                affected_resources.extend(resources_map.get(sig, []))
 
         if logic == "ALL":
             status = all(not signals.get(sig, False) for sig in required_signals)
@@ -37,9 +42,11 @@ def evaluate_controls(signals, controls):
             "signals_checked": required_signals,
             "triggered_signals": triggered_signals,
             "signal_states": signal_states,
+            "affected_resources": sorted(list(set(affected_resources))),
             "plain_english_fail": control.get("plain_english_fail", ""),
             "risk": control.get("risk", ""),
-            "recommendation": control.get("recommendation", "")
+            "recommendation": control.get("recommendation", ""),
+            "framework_mappings": control.get("framework_mappings", {})
         }
 
     return results

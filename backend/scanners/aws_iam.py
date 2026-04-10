@@ -8,12 +8,11 @@ ADMIN_POLICIES = {
 
 def get_iam_signals(profile_name="cloudguardian-demo"):
     """
-    Returns IAM-related compliance signals.
-
-    Signals:
-    - ROOT_MFA_DISABLED
-    - IAM_USER_MFA_MISSING
-    - IAM_USER_ADMIN_POLICY
+    Returns:
+    {
+      "signals": {...},
+      "resources": {...}
+    }
     """
     session = boto3.Session(profile_name=profile_name)
     iam = session.client("iam")
@@ -24,10 +23,18 @@ def get_iam_signals(profile_name="cloudguardian-demo"):
         "IAM_USER_ADMIN_POLICY": False
     }
 
+    resources = {
+        "ROOT_MFA_DISABLED": [],
+        "IAM_USER_MFA_MISSING": [],
+        "IAM_USER_ADMIN_POLICY": []
+    }
+
     try:
         summary = iam.get_account_summary()
         mfa_enabled = summary.get("SummaryMap", {}).get("AccountMFAEnabled", 0)
-        signals["ROOT_MFA_DISABLED"] = (mfa_enabled == 0)
+        if mfa_enabled == 0:
+            signals["ROOT_MFA_DISABLED"] = True
+            resources["ROOT_MFA_DISABLED"].append("AWS Root Account")
     except Exception as e:
         print(f"[IAM SUMMARY ERROR] {e}")
 
@@ -37,18 +44,22 @@ def get_iam_signals(profile_name="cloudguardian-demo"):
             for user in page.get("Users", []):
                 username = user["UserName"]
 
-                # Check MFA devices
                 mfa_devices = iam.list_mfa_devices(UserName=username).get("MFADevices", [])
                 if len(mfa_devices) == 0:
                     signals["IAM_USER_MFA_MISSING"] = True
+                    resources["IAM_USER_MFA_MISSING"].append(username)
 
-                # Check directly attached user policies
                 attached = iam.list_attached_user_policies(UserName=username).get("AttachedPolicies", [])
                 for policy in attached:
                     if policy.get("PolicyName") in ADMIN_POLICIES:
                         signals["IAM_USER_ADMIN_POLICY"] = True
+                        resources["IAM_USER_ADMIN_POLICY"].append(username)
+                        break
 
     except Exception as e:
         print(f"[IAM USER CHECK ERROR] {e}")
 
-    return signals
+    return {
+        "signals": signals,
+        "resources": resources
+    }

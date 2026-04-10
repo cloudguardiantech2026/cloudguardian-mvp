@@ -276,3 +276,33 @@ SMEs and reviewers can now download the assessor-ready PDF evidence pack directl
 
 ### Significance
 This improves product usability and makes the MVP feel more like a real SaaS workflow.
+
+## RAG V2 – Environment-Aware and Persona-Aware Guidance
+
+### Summary
+CloudGuardian’s remediation intelligence layer now includes:
+- affected resource awareness
+- persona-aware output rendering
+- sector-aware guidance
+- remediation priority
+
+### Enhancements
+- Scanner outputs now include affected resources
+- Control evaluation now aggregates affected resources
+- RAG answers include:
+  - affected resources
+  - persona framing
+  - priority
+  - sector relevance
+
+### Supported Personas
+- executive
+- technical
+- legal
+
+### Supported Sectors
+- general
+- legal
+
+### Significance
+This moves CloudGuardian from generic remediation guidance toward context-aware compliance intelligence.

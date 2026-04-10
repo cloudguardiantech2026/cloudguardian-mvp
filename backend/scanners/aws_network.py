@@ -11,17 +11,11 @@ CRITICAL_PORTS = {
 
 def get_network_signals(profile_name="cloudguardian-demo", region_name="eu-west-2"):
     """
-    Returns AWS network-related compliance signals.
-
-    Signals:
-    - SG_SSH_OPEN
-    - SG_RDP_OPEN
-    - SG_MYSQL_OPEN
-    - SG_POSTGRES_OPEN
-    - IGW_ATTACHED
-    - PUBLIC_ROUTE_EXISTS
-    - EC2_PUBLIC_IP_PRESENT
-    - PUBLIC_EXPOSURE
+    Returns:
+    {
+      "signals": {...},
+      "resources": {...}
+    }
     """
     session = boto3.Session(profile_name=profile_name, region_name=region_name)
     ec2 = session.client("ec2")
@@ -37,11 +31,23 @@ def get_network_signals(profile_name="cloudguardian-demo", region_name="eu-west-
         "PUBLIC_EXPOSURE": False
     }
 
+    resources = {
+        "SG_SSH_OPEN": [],
+        "SG_RDP_OPEN": [],
+        "SG_MYSQL_OPEN": [],
+        "SG_POSTGRES_OPEN": [],
+        "IGW_ATTACHED": [],
+        "PUBLIC_ROUTE_EXISTS": [],
+        "EC2_PUBLIC_IP_PRESENT": [],
+        "PUBLIC_EXPOSURE": []
+    }
+
     try:
-        # 1. Security group checks
         sg_response = ec2.describe_security_groups()
 
         for sg in sg_response.get("SecurityGroups", []):
+            sg_name = sg.get("GroupName", sg.get("GroupId", "unknown-sg"))
+
             for permission in sg.get("IpPermissions", []):
                 from_port = permission.get("FromPort")
                 to_port = permission.get("ToPort")
@@ -55,37 +61,45 @@ def get_network_signals(profile_name="cloudguardian-demo", region_name="eu-west-
                         for port, signal_name in CRITICAL_PORTS.items():
                             if from_port <= port <= to_port:
                                 signals[signal_name] = True
+                                resources[signal_name].append(sg_name)
 
-        # 2. Internet gateway check
         igw_response = ec2.describe_internet_gateways()
-        if igw_response.get("InternetGateways"):
-            signals["IGW_ATTACHED"] = True
+        for igw in igw_response.get("InternetGateways", []):
+            igw_id = igw.get("InternetGatewayId")
+            if igw_id:
+                signals["IGW_ATTACHED"] = True
+                resources["IGW_ATTACHED"].append(igw_id)
 
-        # 3. Public route check
         route_tables = ec2.describe_route_tables()
         for rt in route_tables.get("RouteTables", []):
+            rt_id = rt.get("RouteTableId", "unknown-rt")
             for route in rt.get("Routes", []):
                 destination = route.get("DestinationCidrBlock")
                 gateway_id = route.get("GatewayId", "")
                 if destination == "0.0.0.0/0" and gateway_id.startswith("igw-"):
                     signals["PUBLIC_ROUTE_EXISTS"] = True
+                    resources["PUBLIC_ROUTE_EXISTS"].append(rt_id)
 
-        # 4. EC2 public IP check
         reservations = ec2.describe_instances().get("Reservations", [])
         for reservation in reservations:
             for instance in reservation.get("Instances", []):
-                if instance.get("State", {}).get("Name") in ["running", "pending", "stopped", "stopping"]:
+                instance_id = instance.get("InstanceId", "unknown-instance")
+                state = instance.get("State", {}).get("Name")
+                if state in ["running", "pending", "stopped", "stopping"]:
                     if instance.get("PublicIpAddress"):
                         signals["EC2_PUBLIC_IP_PRESENT"] = True
+                        resources["EC2_PUBLIC_IP_PRESENT"].append(instance_id)
 
-        # 5. Aggregate public exposure signal
-        if (
-            signals["PUBLIC_ROUTE_EXISTS"]
-            and signals["EC2_PUBLIC_IP_PRESENT"]
-        ):
+        if signals["PUBLIC_ROUTE_EXISTS"] and signals["EC2_PUBLIC_IP_PRESENT"]:
             signals["PUBLIC_EXPOSURE"] = True
+            resources["PUBLIC_EXPOSURE"] = list(
+                set(resources["PUBLIC_ROUTE_EXISTS"] + resources["EC2_PUBLIC_IP_PRESENT"])
+            )
 
     except Exception as e:
         print(f"[NETWORK SCANNER ERROR] {e}")
 
-    return signals
+    return {
+        "signals": signals,
+        "resources": resources
+    }

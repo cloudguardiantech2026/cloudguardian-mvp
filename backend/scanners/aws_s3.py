@@ -6,11 +6,6 @@ PUBLIC_AUTH_USERS_URI = "http://acs.amazonaws.com/groups/global/AuthenticatedUse
 
 
 def _is_bucket_public(s3, bucket_name: str) -> bool:
-    """
-    Returns True if bucket appears publicly readable via:
-    - ACL grants
-    - Bucket policy status
-    """
     try:
         acl = s3.get_bucket_acl(Bucket=bucket_name)
         for grant in acl.get("Grants", []):
@@ -54,10 +49,18 @@ def list_s3_buckets(profile_name="cloudguardian-demo"):
 
 def get_s3_signals(profile_name="cloudguardian-demo"):
     """
-    Returns S3-related compliance signals for the framework engine.
+    Returns:
+    {
+      "signals": {...},
+      "resources": {...}
+    }
     """
     signals = {
         "S3_PUBLIC": False
+    }
+
+    resources = {
+        "S3_PUBLIC": []
     }
 
     buckets = list_s3_buckets(profile_name=profile_name)
@@ -65,6 +68,9 @@ def get_s3_signals(profile_name="cloudguardian-demo"):
     for bucket in buckets:
         if bucket.get("public_read") is True:
             signals["S3_PUBLIC"] = True
-            break
+            resources["S3_PUBLIC"].append(bucket["name"])
 
-    return signals
+    return {
+        "signals": signals,
+        "resources": resources
+    }

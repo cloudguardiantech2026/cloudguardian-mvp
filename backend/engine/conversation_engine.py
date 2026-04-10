@@ -1,7 +1,18 @@
 from engine.rag_engine import get_guidance_for_control
 
 
-def handle_query(query, results, drift, score_data, persona="technical", sector="general"):
+CURRENT_PERSONA = "technical"
+CURRENT_SECTOR = "general"
+
+
+def handle_query(query, results, drift, score_data, persona=None, sector=None):
+    global CURRENT_PERSONA, CURRENT_SECTOR
+
+    if persona is None:
+        persona = CURRENT_PERSONA
+    if sector is None:
+        sector = CURRENT_SECTOR
+
     q = query.strip().lower()
 
     if q in ["help", "?"]:
@@ -12,9 +23,28 @@ def handle_query(query, results, drift, score_data, persona="technical", sector=
             "- show compliance score\n"
             "- why did ce_2_1 fail\n"
             "- how do i fix ce_2_1\n"
+            "- set persona executive\n"
+            "- set persona technical\n"
+            "- set persona legal\n"
+            "- set sector general\n"
+            "- set sector legal\n"
             "- what changed\n"
             "- exit"
         )
+
+    if q.startswith("set persona "):
+        new_persona = q.replace("set persona ", "").strip().lower()
+        if new_persona in ["executive", "technical", "legal"]:
+            CURRENT_PERSONA = new_persona
+            return f"Persona set to {CURRENT_PERSONA}."
+        return "Unsupported persona. Use executive, technical, or legal."
+
+    if q.startswith("set sector "):
+        new_sector = q.replace("set sector ", "").strip().lower()
+        if new_sector in ["general", "legal"]:
+            CURRENT_SECTOR = new_sector
+            return f"Sector set to {CURRENT_SECTOR}."
+        return "Unsupported sector. Use general or legal."
 
     if q == "show failed controls":
         failed = [f"{cid} - {data['name']}" for cid, data in results.items() if data["status"] == "FAIL"]
@@ -47,7 +77,8 @@ def handle_query(query, results, drift, score_data, persona="technical", sector=
                 f"Reason: {data['plain_english_fail']}\n"
                 f"Risk: {data['risk']}\n"
                 f"Recommendation: {data['recommendation']}\n"
-                f"Triggered Signals: {', '.join(data['triggered_signals'])}"
+                f"Triggered Signals: {', '.join(data['triggered_signals'])}\n"
+                f"Affected Resources: {', '.join(data['affected_resources']) if data['affected_resources'] else 'None'}"
             )
         return f"No control found with ID {control_id}."
 
@@ -61,8 +92,8 @@ def handle_query(query, results, drift, score_data, persona="technical", sector=
             return get_guidance_for_control(
                 control_id=control_id,
                 control_data=data,
-                persona=persona,
-                sector=sector,
+                persona=CURRENT_PERSONA,
+                sector=CURRENT_SECTOR,
                 query=query,
             )
         return f"No control found with ID {control_id}."

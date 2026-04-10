@@ -1,4 +1,13 @@
 from rag.retrieval.retriever import retrieve_guidance
+from engine.persona_engine import apply_persona_view
+
+
+def get_priority(severity):
+    if severity == "HIGH":
+        return "High - address before production exposure or continued operational use."
+    if severity == "MEDIUM":
+        return "Medium - address in the next remediation cycle."
+    return "Low - review and address as part of routine hardening."
 
 
 def build_guidance_answer(control_id, control_data, docs, persona="technical", sector="general"):
@@ -7,21 +16,35 @@ def build_guidance_answer(control_id, control_data, docs, persona="technical", s
     risk = control_data.get("risk", "")
     recommendation = control_data.get("recommendation", "")
     triggered = control_data.get("triggered_signals", [])
+    affected_resources = control_data.get("affected_resources", [])
+    severity = control_data.get("severity", "MEDIUM")
 
     lines = []
     lines.append(f"Control: {control_id} - {name}")
     lines.append("")
-    lines.append("Why it failed:")
-    lines.append(reason)
+
+    lines.append(apply_persona_view(
+        persona=persona,
+        control_name=name,
+        reason=reason,
+        risk=risk,
+        recommendation=recommendation,
+        resources=affected_resources
+    ))
     lines.append("")
-    lines.append("Why it matters:")
-    lines.append(risk)
+
+    lines.append("Priority:")
+    lines.append(get_priority(severity))
     lines.append("")
-    lines.append("Immediate recommendation:")
-    lines.append(recommendation)
-    lines.append("")
+
     lines.append(f"Triggered signals: {', '.join(triggered) if triggered else 'None'}")
     lines.append("")
+
+    if affected_resources:
+        lines.append("Affected resources:")
+        for r in affected_resources:
+            lines.append(f"- {r}")
+        lines.append("")
 
     if docs:
         for doc in docs:
