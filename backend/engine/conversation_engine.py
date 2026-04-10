@@ -1,4 +1,4 @@
-from engine.rag_engine import get_guidance_for_control
+from .rag_engine import get_guidance_for_control
 
 
 CURRENT_PERSONA = "technical"
@@ -23,6 +23,7 @@ def handle_query(query, results, drift, score_data, persona=None, sector=None):
             "- show compliance score\n"
             "- why did ce_2_1 fail\n"
             "- how do i fix ce_2_1\n"
+            "- show sra relevance for ce_2_1\n"
             "- set persona executive\n"
             "- set persona technical\n"
             "- set persona legal\n"
@@ -71,7 +72,8 @@ def handle_query(query, results, drift, score_data, persona=None, sector=None):
             data = results[control_id]
             if data["status"] == "PASS":
                 return f"{control_id} passed. No failing signals were detected."
-            return (
+
+            response = (
                 f"{control_id} failed.\n"
                 f"Control: {data['name']}\n"
                 f"Reason: {data['plain_english_fail']}\n"
@@ -80,6 +82,31 @@ def handle_query(query, results, drift, score_data, persona=None, sector=None):
                 f"Triggered Signals: {', '.join(data['triggered_signals'])}\n"
                 f"Affected Resources: {', '.join(data['affected_resources']) if data['affected_resources'] else 'None'}"
             )
+
+            if sector == "legal":
+                sra = data.get("framework_mappings", {}).get("sra", {})
+                if sra:
+                    response += (
+                        f"\nSRA Area: {sra.get('area', 'N/A')}"
+                        f"\nSRA Relevance: {sra.get('relevance', 'N/A')}"
+                    )
+
+            return response
+
+        return f"No control found with ID {control_id}."
+
+    if q.startswith("show sra relevance for "):
+        control_id = q.replace("show sra relevance for ", "").strip().upper()
+
+        if control_id in results:
+            sra = results[control_id].get("framework_mappings", {}).get("sra", {})
+            if not sra:
+                return f"No SRA mapping found for {control_id}."
+            return (
+                f"SRA Area: {sra.get('area', 'N/A')}\n"
+                f"SRA Relevance: {sra.get('relevance', 'N/A')}"
+            )
+
         return f"No control found with ID {control_id}."
 
     if q.startswith("how do i fix "):
@@ -96,6 +123,7 @@ def handle_query(query, results, drift, score_data, persona=None, sector=None):
                 sector=CURRENT_SECTOR,
                 query=query,
             )
+
         return f"No control found with ID {control_id}."
 
     if q == "what changed":

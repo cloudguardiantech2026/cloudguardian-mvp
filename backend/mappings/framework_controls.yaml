@@ -11,6 +11,13 @@ controls:
     plain_english_fail: "Multi-Factor Authentication or privileged access controls are not fully enforced."
     risk: "Without MFA or with excessive user permissions, a compromised account could lead to unauthorized administrative access."
     recommendation: "Enable MFA for the AWS root account, enforce MFA for IAM users, and avoid assigning admin-level permissions directly to users."
+    framework_mappings:
+      cyber_essentials:
+        control_id: "CE_1_2"
+        control_name: "Multi-Factor Authentication"
+      sra:
+        area: "Access control and information security"
+        relevance: "Weak identity and privilege controls may increase the risk of unauthorized access to confidential client information."
 
   CE_2_1:
     name: "Secure Configuration"
@@ -22,6 +29,13 @@ controls:
     plain_english_fail: "One or more storage resources are publicly accessible."
     risk: "Sensitive business data may be exposed to the internet."
     recommendation: "Disable public access on S3 buckets and enable Block Public Access settings."
+    framework_mappings:
+      cyber_essentials:
+        control_id: "CE_2_1"
+        control_name: "Secure Configuration"
+      sra:
+        area: "Client confidentiality and information security"
+        relevance: "Public storage exposure may create confidentiality and data-handling concerns where client or matter information is involved."
 
   CE_3_1:
     name: "Boundary Firewalls and Internet Gateways"
@@ -37,3 +51,10 @@ controls:
     plain_english_fail: "One or more workloads appear reachable from the public internet through network exposure or public routing."
     risk: "Publicly reachable systems increase the likelihood of unauthorized access, scanning, and brute-force attacks."
     recommendation: "Restrict security group rules, review route tables, avoid unnecessary public IP assignment, and ensure only intended services are internet-facing."
+    framework_mappings:
+      cyber_essentials:
+        control_id: "CE_3_1"
+        control_name: "Boundary Firewalls and Internet Gateways"
+      sra:
+        area: "Network security and protection of confidential systems"
+        relevance: "Unnecessary public exposure may increase the risk of unauthorized access to systems used to process or store confidential client information."

@@ -306,3 +306,19 @@ CloudGuardian’s remediation intelligence layer now includes:
 
 ### Significance
 This moves CloudGuardian from generic remediation guidance toward context-aware compliance intelligence.
+
+## SRA Mapping Layer
+
+### Summary
+CloudGuardian now supports secondary sector-specific framework mappings for legal-sector interpretation.
+
+### Implementation
+Each Cyber Essentials control can include:
+- primary Cyber Essentials mapping
+- secondary SRA relevance mapping
+
+### Purpose
+This allows CloudGuardian to evaluate technical controls against Cyber Essentials while also explaining their relevance to legal-sector information security and confidentiality expectations.
+
+### Significance
+This strengthens product differentiation by introducing sector-specific compliance intelligence rather than generic cloud-security reporting.
