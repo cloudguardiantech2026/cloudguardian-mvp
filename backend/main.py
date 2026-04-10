@@ -1,10 +1,10 @@
-from scanners.aws_s3 import get_s3_signals
-from scanners.aws_iam import get_iam_signals
-from scanners.aws_network import get_network_signals
-from engine.framework_engine import load_controls, evaluate_controls, calculate_compliance_score
-from engine.drift_engine import load_previous_state, save_current_state, detect_drift
-from engine.conversation_engine import handle_query
-from reports.pdf_generator import generate_control_pdf
+from .scanners.aws_s3 import get_s3_signals
+from .scanners.aws_iam import get_iam_signals
+from .scanners.aws_network import get_network_signals
+from .engine.framework_engine import load_controls, evaluate_controls, calculate_compliance_score
+from .engine.drift_engine import load_previous_state, save_current_state, detect_drift
+from .engine.conversation_engine import handle_query
+from .reports.pdf_generator import generate_control_pdf
 
 
 def merge_scan_output(scan_output, signals, resources_map):
