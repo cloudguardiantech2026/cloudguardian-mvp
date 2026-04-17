@@ -1,4 +1,5 @@
 from .rag_engine import get_guidance_for_control
+from .nlp_router import route_natural_language
 
 
 CURRENT_PERSONA = "technical"
@@ -13,7 +14,12 @@ def handle_query(query, results, drift, score_data, persona=None, sector=None):
     if sector is None:
         sector = CURRENT_SECTOR
 
-    q = query.strip().lower()
+    original_query = query.strip()
+    q = original_query.lower()
+
+    routed_command = route_natural_language(original_query)
+    if routed_command:
+        q = routed_command.lower()
 
     if q in ["help", "?"]:
         return (
@@ -121,7 +127,7 @@ def handle_query(query, results, drift, score_data, persona=None, sector=None):
                 control_data=data,
                 persona=CURRENT_PERSONA,
                 sector=CURRENT_SECTOR,
-                query=query,
+                query=original_query,
             )
 
         return f"No control found with ID {control_id}."
@@ -136,4 +142,7 @@ def handle_query(query, results, drift, score_data, persona=None, sector=None):
             )
         return "Compliance drift detected:\n" + "\n".join(lines)
 
-    return "I did not understand that query. Type 'help' for available commands."
+    return (
+        "I couldn't confidently map that request to a known compliance action yet. "
+        "Try asking about score, failed controls, what changed, why a control failed, or how to fix a control."
+    )
