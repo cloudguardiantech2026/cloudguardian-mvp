@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <h1>CloudGuardian</h1>
-        <p class="subtitle">Compliance Modelling Platform for Cyber Essentials</p>
+        <p class="subtitle">Cloud compliance intelligence for Cyber Essentials</p>
 
         <div class="card">
             <form method="POST">
@@ -17,22 +17,34 @@
             </form>
         </div>
 
-        {% if score_data %}
         <div class="grid">
             <div class="card">
                 <h2>Compliance Score</h2>
-                <div class="score">{{ score_data.score }}%</div>
+                {% if score_data %}
+                    <div class="score">{{ score_data.score }}%</div>
+                    <p>This shows how close your current AWS environment is to the controls CloudGuardian is checking.</p>
+                {% else %}
+                    <div class="score">No scan yet</div>
+                    <p>Run a scan to see your current compliance position.</p>
+                {% endif %}
             </div>
+
             <div class="card">
                 <h2>Risk Level</h2>
-                <div class="risk {{ score_data.risk_level|lower }}">{{ score_data.risk_level }}</div>
+                {% if score_data %}
+                    <div class="risk {{ score_data.risk_level|lower }}">{{ score_data.risk_level }}</div>
+                    <p>This gives a quick indication of how urgent your current issues are.</p>
+                {% else %}
+                    <div class="risk">Unknown</div>
+                    <p>Risk level will appear after a scan is completed.</p>
+                {% endif %}
             </div>
         </div>
-        {% endif %}
 
-        {% if results %}
         <div class="card">
             <h2>Control Results</h2>
+
+            {% if results %}
             <table>
                 <thead>
                     <tr>
@@ -47,39 +59,90 @@
                         <td>
                             <strong>{{ cid }}</strong><br>
                             {{ data.name }}
+
                             {% if data.status == "FAIL" %}
                             <div class="detail">
-                                <p><strong>Reason:</strong> {{ data.plain_english_fail }}</p>
-                                <p><strong>Risk:</strong> {{ data.risk }}</p>
-                                <p><strong>Recommendation:</strong> {{ data.recommendation }}</p>
-                                <p><strong>Triggered Signals:</strong> {{ data.triggered_signals|join(', ') }}</p>
+                                <p><strong>What CloudGuardian found:</strong></p>
+                                <p>{{ data.plain_english_fail }}</p>
+
+                                {% if data.triggered_signals %}
+                                <p><strong>Why this matters:</strong></p>
+                                <ul>
+                                    {% for signal in data.triggered_signals %}
+                                        {% if signal == "IAM_USER_ADMIN_POLICY" %}
+                                            <li>One account has more access than it needs. If that account is compromised, someone could make major changes to your AWS environment.</li>
+                                        {% elif signal == "IAM_USER_MFA_MISSING" %}
+                                            <li>One or more accounts do not use multi-factor authentication. This makes them easier to access if a password is stolen.</li>
+                                        {% elif signal == "ROOT_MFA_DISABLED" %}
+                                            <li>Your main AWS account is not protected with multi-factor authentication.</li>
+                                        {% elif signal == "S3_PUBLIC" %}
+                                            <li>A storage bucket is publicly accessible, which may expose company or customer information.</li>
+                                        {% elif signal == "SG_SSH_OPEN" %}
+                                            <li>One of your systems is reachable from the internet using SSH, which can increase the risk of unwanted access attempts.</li>
+                                        {% elif signal == "SG_RDP_OPEN" %}
+                                            <li>One of your systems is reachable from the internet using Remote Desktop, which can increase remote access risk.</li>
+                                        {% elif signal == "PUBLIC_EXPOSURE" %}
+                                            <li>One or more systems appear reachable from the public internet.</li>
+                                        {% else %}
+                                            <li>{{ signal }}</li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+
+                                {% if data.affected_resources %}
+                                <p><strong>Affected resources:</strong></p>
+                                <ul>
+                                    {% for resource in data.affected_resources %}
+                                        <li>{{ resource }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+
+                                <p><strong>What you should do next:</strong></p>
+                                <p>{{ data.recommendation }}</p>
+
+                                {% if data.framework_mappings and data.framework_mappings.sra %}
+                                <p><strong>Legal / SRA relevance:</strong></p>
+                                <p>{{ data.framework_mappings.sra.relevance }}</p>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <div class="detail">
+                                <p>This control is currently passing based on the checks CloudGuardian performed.</p>
                             </div>
                             {% endif %}
                         </td>
+
                         <td class="{{ data.status|lower }}">{{ data.status }}</td>
                         <td>{{ data.severity }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            {% else %}
+                <p>No scan results available yet. Run a compliance scan to view results.</p>
+            {% endif %}
         </div>
-        {% endif %}
 
-        {% if drift %}
         <div class="card">
-            <h2>Drift Detection</h2>
+            <h2>Changes Since Last Scan</h2>
+
+            {% if drift %}
             <ul>
                 {% for item in drift %}
                 <li>{{ item.type }}: {{ item.signal }} changed from {{ item.from }} to {{ item.to }}</li>
                 {% endfor %}
             </ul>
+            {% else %}
+                <p>No changes detected yet.</p>
+            {% endif %}
         </div>
-        {% endif %}
 
         <div class="card">
             <h2>Ask CloudGuardian</h2>
             <form method="POST">
-                <input type="text" name="query" placeholder="e.g. why did ce_2_1 fail" required>
+                <input type="text" name="query" placeholder="e.g. why is my storage failing" required>
                 <button type="submit" name="action" value="ask" class="btn">Ask</button>
             </form>
 
@@ -90,13 +153,15 @@
             {% endif %}
         </div>
 
-        {% if pdf_path %}
-<div class="card">
-    <h2>Evidence Pack</h2>
-    <p>Your assessor-ready evidence pack has been generated.</p>
-    <a href="{{ url_for('download_pdf') }}" class="btn">Download PDF Evidence Pack</a>
-</div>
-{% endif %}
+        <div class="card">
+            <h2>Evidence Pack</h2>
+            {% if pdf_path %}
+                <p>Your assessor-ready evidence pack has been generated.</p>
+                <a href="{{ url_for('download_pdf') }}" class="btn">Download PDF Evidence Pack</a>
+            {% else %}
+                <p>No evidence pack generated yet. Run a compliance scan first.</p>
+            {% endif %}
+        </div>
     </div>
 </body>
 </html>

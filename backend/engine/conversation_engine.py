@@ -1,5 +1,6 @@
 from .rag_engine import get_guidance_for_control
 from .nlp_router import route_natural_language
+from .explanation_layer import build_control_summary
 
 
 CURRENT_PERSONA = "technical"
@@ -76,28 +77,34 @@ def handle_query(query, results, drift, score_data, persona=None, sector=None):
 
         if control_id in results:
             data = results[control_id]
+
             if data["status"] == "PASS":
-                return f"{control_id} passed. No failing signals were detected."
+                return (
+                    f"{control_id} is currently passing. "
+                    "CloudGuardian did not detect any issues for this control."
+                )
 
-            response = (
-                f"{control_id} failed.\n"
-                f"Control: {data['name']}\n"
-                f"Reason: {data['plain_english_fail']}\n"
-                f"Risk: {data['risk']}\n"
-                f"Recommendation: {data['recommendation']}\n"
-                f"Triggered Signals: {', '.join(data['triggered_signals'])}\n"
-                f"Affected Resources: {', '.join(data['affected_resources']) if data['affected_resources'] else 'None'}"
-            )
+            summaries = build_control_summary(data)
 
-            if sector == "legal":
-                sra = data.get("framework_mappings", {}).get("sra", {})
-                if sra:
-                    response += (
-                        f"\nSRA Area: {sra.get('area', 'N/A')}"
-                        f"\nSRA Relevance: {sra.get('relevance', 'N/A')}"
-                    )
+            lines = []
+            lines.append(f"{control_id} failed: {data['name']}")
+            lines.append("")
+            lines.append(data["plain_english_fail"])
+            lines.append("")
 
-            return response
+            for item in summaries:
+                lines.append(f"Issue: {item['title']}")
+                lines.append(f"Why this matters: {item['business_impact']}")
+                lines.append(f"Recommended action: {item['action']}")
+                lines.append("")
+
+            if data.get("affected_resources"):
+                lines.append("Affected resources:")
+                for resource in data["affected_resources"]:
+                    lines.append(f"- {resource}")
+                lines.append("")
+
+            return "\n".join(lines)
 
         return f"No control found with ID {control_id}."
 
