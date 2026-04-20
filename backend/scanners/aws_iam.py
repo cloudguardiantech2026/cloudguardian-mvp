@@ -6,15 +6,27 @@ ADMIN_POLICIES = {
 }
 
 
-def get_iam_signals(profile_name="cloudguardian-demo"):
-    """
-    Returns:
-    {
-      "signals": {...},
-      "resources": {...}
-    }
-    """
-    session = boto3.Session(profile_name=profile_name)
+def build_session(profile_name=None, access_key=None, secret_key=None, region_name=None):
+    if access_key and secret_key:
+        return boto3.Session(
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            region_name=region_name,
+        )
+
+    return boto3.Session(
+        profile_name=profile_name,
+        region_name=region_name,
+    )
+
+
+def get_iam_signals(profile_name=None, access_key=None, secret_key=None, region_name=None):
+    session = build_session(
+        profile_name=profile_name,
+        access_key=access_key,
+        secret_key=secret_key,
+        region_name=region_name,
+    )
     iam = session.client("iam")
 
     signals = {

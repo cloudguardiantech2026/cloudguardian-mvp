@@ -1,86 +1,70 @@
-from fpdf import FPDF
-from datetime import datetime
-import os
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+    PageBreak,
+)
 
 
-OUTPUT_PATH = "backend/reports/cloudguardian_evidence_pack.pdf"
 
+def generate_control_pdf(results, score_data, output_path="backend/reports/cloudguardian_evidence_pack.pdf"):
+    doc = SimpleDocTemplate(output_path, pagesize=letter)
+    styles = getSampleStyleSheet()
 
-class EvidencePDF(FPDF):
-    pass
+    story = []
 
+    title = Paragraph("<b>CloudGuardian Evidence Pack</b>", styles["Title"])
+    subtitle = Paragraph(
+        "Cyber Essentials cloud posture assessment summary",
+        styles["Heading2"]
+    )
 
-def generate_control_pdf(results, score_data, framework_name="Cyber Essentials", output_path=OUTPUT_PATH):
-    pdf = EvidencePDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
+    story.append(title)
+    story.append(Spacer(1, 12))
+    story.append(subtitle)
+    story.append(Spacer(1, 24))
 
-    # Title
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "CloudGuardian Evidence Pack", ln=1)
+    score = score_data.get("score", 0)
+    risk = score_data.get("risk_level", "UNKNOWN")
 
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 8, f"Framework: {framework_name}", ln=1)
-    pdf.cell(0, 8, f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", ln=1)
-    pdf.ln(5)
+    summary_table = Table([
+        ["Compliance Score", f"{score}%"],
+        ["Overall Risk Level", risk],
+    ], colWidths=[200, 250])
 
-    # Summary
-    total_controls = len(results)
-    failed_controls = sum(1 for r in results.values() if r["status"] == "FAIL")
-    passed_controls = total_controls - failed_controls
-    overall_status = "NON-COMPLIANT" if failed_controls > 0 else "COMPLIANT"
-    
-    pdf.cell(0, 7, f"Compliance Score: {score_data['score']}%", ln=1)
-    pdf.cell(0, 7, f"Risk Level: {score_data['risk_level']}", ln=1)
+    summary_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.lightgrey),
+        ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
+        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
+        ("PADDING", (0, 0), (-1, -1), 8),
+    ]))
 
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "Executive Summary", ln=1)
+    story.append(summary_table)
+    story.append(Spacer(1, 20))
 
-    pdf.set_font("Arial", "", 11)
-    pdf.cell(0, 7, f"Overall Status: {overall_status}", ln=1)
-    pdf.cell(0, 7, f"Controls Passed: {passed_controls}", ln=1)
-    pdf.cell(0, 7, f"Controls Failed: {failed_controls}", ln=1)
-    pdf.ln(5)
+    story.append(Paragraph("<b>What this means</b>", styles["Heading2"]))
 
-    # Control details
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "Control Evaluation Results", ln=1)
+    if risk == "HIGH":
+        meaning = (
+            "CloudGuardian identified one or more issues that may expose your systems or information to unnecessary risk. "
+            "These should be addressed before relying on this environment for normal business use."
+        )
+    elif risk == "MEDIUM":
+        meaning = (
+            "CloudGuardian identified some issues that should be improved to strengthen your security posture."
+        )
+    else:
+        meaning = (
+            "CloudGuardian did not identify any major issues in the areas checked during this assessment."
+        )
 
-    for control_id, data in results.items():
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 8, f"{control_id} - {data['name']}: {data['status']} [{data['severity']}]", ln=1)
+    story.append(Paragraph(meaning, styles["BodyText"]))
+    story.append(Spacer(1, 20))
 
-        pdf.set_font("Arial", "", 11)
-
-        if data["status"] == "FAIL":
-            pdf.set_font("Arial", "B", 11)
-            pdf.cell(0, 7, "Issue Summary:", ln=1)
-
-            pdf.set_font("Arial", "", 11)
-            pdf.multi_cell(0, 7, f"{data['plain_english_fail']}")
-
-            pdf.set_font("Arial", "B", 11)
-            pdf.cell(0, 7, "Risk Impact:", ln=1)
-
-            pdf.set_font("Arial", "", 11)
-            pdf.multi_cell(0, 7, f"{data['risk']}")
-
-            pdf.set_font("Arial", "B", 11)
-            pdf.cell(0, 7, "Recommended Action:", ln=1)
-
-            pdf.set_font("Arial", "", 11)
-            pdf.multi_cell(0, 7, f"{data['recommendation']}")
-
-            pdf.set_font("Arial", "B", 11)
-            pdf.cell(0, 7, "Technical Evidence:", ln=1)
-
-            pdf.set_font("Arial", "", 11)
-            pdf.multi_cell(0, 7, f"Triggered Signals: {', '.join(data['triggered_signals'])}")
-        else:
-            pdf.multi_cell(0, 7, "Status Explanation: No failing signals detected for this control.")
-
-        pdf.ln(3)
-
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    pdf.output(output_path)
     return output_path

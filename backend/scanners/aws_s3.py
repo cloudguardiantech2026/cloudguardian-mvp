@@ -5,6 +5,20 @@ PUBLIC_ALL_USERS_URI = "http://acs.amazonaws.com/groups/global/AllUsers"
 PUBLIC_AUTH_USERS_URI = "http://acs.amazonaws.com/groups/global/AuthenticatedUsers"
 
 
+def build_session(profile_name=None, access_key=None, secret_key=None, region_name=None):
+    if access_key and secret_key:
+        return boto3.Session(
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            region_name=region_name,
+        )
+
+    return boto3.Session(
+        profile_name=profile_name,
+        region_name=region_name,
+    )
+
+
 def _is_bucket_public(s3, bucket_name: str) -> bool:
     try:
         acl = s3.get_bucket_acl(Bucket=bucket_name)
@@ -27,8 +41,13 @@ def _is_bucket_public(s3, bucket_name: str) -> bool:
     return False
 
 
-def list_s3_buckets(profile_name="cloudguardian-demo"):
-    session = boto3.Session(profile_name=profile_name)
+def list_s3_buckets(profile_name=None, access_key=None, secret_key=None, region_name=None):
+    session = build_session(
+        profile_name=profile_name,
+        access_key=access_key,
+        secret_key=secret_key,
+        region_name=region_name,
+    )
     s3 = session.client("s3")
 
     resp = s3.list_buckets()
@@ -47,14 +66,7 @@ def list_s3_buckets(profile_name="cloudguardian-demo"):
     return buckets
 
 
-def get_s3_signals(profile_name="cloudguardian-demo"):
-    """
-    Returns:
-    {
-      "signals": {...},
-      "resources": {...}
-    }
-    """
+def get_s3_signals(profile_name=None, access_key=None, secret_key=None, region_name=None):
     signals = {
         "S3_PUBLIC": False
     }
@@ -63,7 +75,12 @@ def get_s3_signals(profile_name="cloudguardian-demo"):
         "S3_PUBLIC": []
     }
 
-    buckets = list_s3_buckets(profile_name=profile_name)
+    buckets = list_s3_buckets(
+        profile_name=profile_name,
+        access_key=access_key,
+        secret_key=secret_key,
+        region_name=region_name,
+    )
 
     for bucket in buckets:
         if bucket.get("public_read") is True:

@@ -1,5 +1,5 @@
-from rag.retrieval.retriever import retrieve_guidance
-from engine.persona_engine import apply_persona_view
+from ..rag.retrieval.retriever import retrieve_guidance
+from .persona_engine import apply_persona_view
 
 
 def get_priority(severity):

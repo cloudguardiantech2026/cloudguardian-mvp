@@ -1,5 +1,5 @@
 {
-  "S3_PUBLIC": true,
+  "S3_PUBLIC": false,
   "ROOT_MFA_DISABLED": false,
   "IAM_USER_MFA_MISSING": true,
   "IAM_USER_ADMIN_POLICY": true,
@@ -9,6 +9,6 @@
   "SG_POSTGRES_OPEN": false,
   "IGW_ATTACHED": true,
   "PUBLIC_ROUTE_EXISTS": true,
-  "EC2_PUBLIC_IP_PRESENT": true,
-  "PUBLIC_EXPOSURE": true
+  "EC2_PUBLIC_IP_PRESENT": false,
+  "PUBLIC_EXPOSURE": false
 }

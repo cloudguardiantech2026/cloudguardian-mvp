@@ -12,6 +12,36 @@
         <p class="subtitle">Cloud compliance intelligence for Cyber Essentials</p>
 
         <div class="card">
+            <h2>AWS Connection</h2>
+            <p>Use either a local AWS CLI profile or temporary AWS access keys for this session.</p>
+
+            <form method="POST">
+                <input type="hidden" name="action" value="set_connection">
+
+                <label><strong>AWS CLI Profile (optional)</strong></label><br>
+                <input type="text" name="profile_name" placeholder="e.g. friend-demo" value="{{ profile_name }}"><br><br>
+
+                <label><strong>AWS Access Key ID (optional)</strong></label><br>
+                <input type="text" name="access_key" placeholder="AKIA..." value="{{ access_key }}"><br><br>
+
+                <label><strong>AWS Secret Access Key (optional)</strong></label><br>
+                <input type="password" name="secret_key" placeholder="Enter secret access key"><br><br>
+
+                <label><strong>AWS Region</strong></label><br>
+                <input type="text" name="region_name" placeholder="eu-west-2" value="{{ region_name }}"><br><br>
+
+                <button type="submit" class="btn">Save Connection</button>
+            </form>
+        </div>
+
+        {% if error %}
+        <div class="card">
+            <h2>Error</h2>
+            <p>{{ error }}</p>
+        </div>
+        {% endif %}
+
+        <div class="card">
             <form method="POST">
                 <button type="submit" name="action" value="scan" class="btn">Run Compliance Scan</button>
             </form>
