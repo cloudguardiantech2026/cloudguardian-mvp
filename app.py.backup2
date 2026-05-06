@@ -1,17 +1,18 @@
-
-
 import json
 import os
-import markdown
 from flask import Flask, render_template, request, send_file, session
 from backend.scanners.aws_s3 import get_s3_signals
 from backend.scanners.aws_iam import get_iam_signals
 from backend.scanners.aws_network import get_network_signals
 from backend.engine.framework_engine import (
-    load_controls, evaluate_controls, calculate_compliance_score,
+    load_controls,
+    evaluate_controls,
+    calculate_compliance_score,
 )
 from backend.engine.drift_engine import (
-    load_previous_state, save_current_state, detect_drift,
+    load_previous_state,
+    save_current_state,
+    detect_drift,
 )
 from backend.engine.conversation_engine import handle_query
 from backend.reports.pdf_generator import generate_control_pdf
@@ -19,8 +20,8 @@ from backend.reports.pdf_generator import generate_control_pdf
 app = Flask(__name__)
 app.secret_key = "cloudguardian-secret-2026"
 
+# ── File-based scan cache (avoids Flask session cookie size limits) ──
 SCAN_CACHE_PATH = "backend/state/scan_cache.json"
-
 
 def save_scan_cache(results, score_data, drift, profile_name):
     os.makedirs(os.path.dirname(SCAN_CACHE_PATH), exist_ok=True)
@@ -32,19 +33,12 @@ def save_scan_cache(results, score_data, drift, profile_name):
             "profile_name": profile_name,
         }, f)
 
-
-def load_scan_cache(current_profile):
-    """Load cache only if it belongs to the current profile."""
+def load_scan_cache():
     try:
         with open(SCAN_CACHE_PATH, "r") as f:
-            data = json.load(f)
-        # Only return cache if it matches the active profile
-        if data.get("profile_name", "").strip() == current_profile.strip():
-            return data
-        return None
+            return json.load(f)
     except Exception:
         return None
-
 
 def clear_scan_cache():
     try:
@@ -53,7 +47,7 @@ def clear_scan_cache():
     except Exception:
         pass
 
-
+# ── Helpers ──────────────────────────────────────────────────────────
 def merge_scan_output(scan_output, signals, resources_map):
     signals.update(scan_output.get("signals", {}))
     for key, value in scan_output.get("resources", {}).items():
@@ -61,44 +55,50 @@ def merge_scan_output(scan_output, signals, resources_map):
             resources_map[key] = []
         resources_map[key].extend(value)
 
+def get_connection_details():
+    return {
+        "profile_name": session.get("profile_name") or None,
+        "access_key":   session.get("access_key")   or None,
+        "secret_key":   session.get("secret_key")   or None,
+        "region_name":  session.get("region_name")  or "eu-west-2",
+    }
 
-def run_scan(profile_name, access_key, secret_key, region_name):
-    """Run a full scan with explicit credentials — no session dependency."""
+def run_scan():
     signals = {}
     resources_map = {}
+    conn = get_connection_details()
 
     for scanner in [get_s3_signals, get_iam_signals, get_network_signals]:
         merge_scan_output(
             scanner(
-                profile_name=profile_name or None,
-                access_key=access_key or None,
-                secret_key=secret_key or None,
-                region_name=region_name or "eu-west-2",
+                profile_name=conn["profile_name"],
+                access_key=conn["access_key"],
+                secret_key=conn["secret_key"],
+                region_name=conn["region_name"],
             ),
             signals,
             resources_map,
         )
 
-    previous_signals = load_previous_state(profile_name)
+    previous_signals = load_previous_state()
     drift = detect_drift(previous_signals, signals)
     controls = load_controls()
     results = evaluate_controls(signals, controls, resources_map)
     score_data = calculate_compliance_score(results)
-    save_current_state(signals, profile_name)
+    save_current_state(signals)
     generate_control_pdf(results, score_data)
 
-    return results, score_data, drift
+    return signals, results, score_data, drift
 
-
+# ── Routes ───────────────────────────────────────────────────────────
 @app.route("/download-pdf")
 def download_pdf():
-    current_profile = session.get("profile_name", "")
-    cache = load_scan_cache(current_profile)
+    # Always regenerate from latest cache before serving
+    cache = load_scan_cache()
     if cache:
         generate_control_pdf(cache["results"], cache["score_data"])
     pdf_path = "backend/reports/cloudguardian_evidence_pack.pdf"
     return send_file(pdf_path, as_attachment=True)
-
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -108,7 +108,7 @@ def index():
     if request.method == "POST":
         action = request.form.get("action")
 
-        # ── Save connection ────────────────────────────────────────
+        # ── Set connection ─────────────────────────────────────────
         if action == "set_connection":
             profile_name = request.form.get("profile_name", "").strip()
             access_key   = request.form.get("access_key",   "").strip()
@@ -116,7 +116,6 @@ def index():
             region_name  = request.form.get("region_name",  "").strip() or "eu-west-2"
 
             session.clear()
-            session.modified = True
             session["profile_name"] = profile_name
             session["access_key"]   = access_key
             session["secret_key"]   = secret_key
@@ -125,24 +124,19 @@ def index():
 
         # ── Run scan ───────────────────────────────────────────────
         elif action == "scan":
-            profile_name = session.get("profile_name", "").strip()
-            access_key   = session.get("access_key",   "").strip()
-            secret_key   = session.get("secret_key",   "").strip()
-            region_name  = session.get("region_name",  "eu-west-2").strip()
-
             try:
-                results, score_data, drift = run_scan(
-                    profile_name, access_key, secret_key, region_name
+                _, results, score_data, drift = run_scan()
+                save_scan_cache(
+                    results, score_data, drift,
+                    session.get("profile_name", "")
                 )
-                save_scan_cache(results, score_data, drift, profile_name)
             except Exception as e:
                 error = f"Scan failed: {str(e)}"
 
-        # ── Ask question ───────────────────────────────────────────
+        # ── Ask conversational engine ──────────────────────────────
         elif action == "ask":
             query = request.form.get("query", "").strip()
-            current_profile = session.get("profile_name", "").strip()
-            cache = load_scan_cache(current_profile)
+            cache = load_scan_cache()
             if cache:
                 try:
                     response = handle_query(
@@ -151,15 +145,19 @@ def index():
                         cache["drift"],
                         cache["score_data"],
                     )
-                    response = markdown.markdown(response)
                 except Exception as e:
                     error = f"Query failed: {str(e)}"
             else:
                 error = "Please run a compliance scan first before asking questions."
 
-    # ── Render ─────────────────────────────────────────────────────
-    current_profile = session.get("profile_name", "").strip()
-    cache = load_scan_cache(current_profile)
+    # ── Load latest results from cache for rendering ───────────────
+    cache = load_scan_cache()
+    cached_profile = cache.get("profile_name", "") if cache else ""
+    current_profile = session.get("profile_name", "")
+
+    # If cache belongs to a different profile, don't show it
+    if cache and cached_profile != current_profile:
+        cache = None
 
     results    = cache["results"]    if cache else {}
     score_data = cache["score_data"] if cache else None
@@ -172,11 +170,10 @@ def index():
         drift=drift,
         response=response,
         error=error,
-        current_profile=current_profile,
-        current_access_key=session.get("access_key", ""),
-        current_region=session.get("region_name", "eu-west-2"),
+        profile_name=current_profile,
+        access_key=session.get("access_key", ""),
+        region_name=session.get("region_name", "eu-west-2"),
     )
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

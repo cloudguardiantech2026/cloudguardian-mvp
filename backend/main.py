@@ -1,3 +1,16 @@
+import os
+import argparse
+parser = argparse.ArgumentParser(description="Run CloudGuardian AWS scan")
+parser.add_argument("--profile", default=os.getenv("AWS_PROFILE", "default"))
+parser.add_argument("--region", default=os.getenv("AWS_REGION", "eu-west-2"))
+
+args = parser.parse_args()
+
+profile_name = args.profile
+region_name = args.region
+
+print(f"Using AWS profile: {profile_name}")
+print(f"Using AWS region: {region_name}")
 from .scanners.aws_s3 import get_s3_signals
 from .scanners.aws_iam import get_iam_signals
 from .scanners.aws_network import get_network_signals
@@ -19,10 +32,10 @@ def merge_scan_output(scan_output, signals, resources_map):
 signals = {}
 resources_map = {}
 
-merge_scan_output(get_s3_signals(profile_name="cloudguardian-demo"), signals, resources_map)
-merge_scan_output(get_iam_signals(profile_name="cloudguardian-demo"), signals, resources_map)
+merge_scan_output(get_s3_signals(profile_name=profile_name), signals, resources_map)
+merge_scan_output(get_iam_signals(profile_name=profile_name), signals, resources_map)
 merge_scan_output(
-    get_network_signals(profile_name="cloudguardian-demo", region_name="eu-west-2"),
+    get_network_signals(profile_name=profile_name, region_name=region_name),
     signals,
     resources_map
 )

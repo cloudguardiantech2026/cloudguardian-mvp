@@ -1,0 +1,181 @@
+from flask import Flask, render_template, request, send_file, session
+from backend.scanners.aws_s3 import get_s3_signals
+from backend.scanners.aws_iam import get_iam_signals
+from backend.scanners.aws_network import get_network_signals
+from backend.engine.framework_engine import (
+    load_controls,
+    evaluate_controls,
+    calculate_compliance_score,
+)
+from backend.engine.drift_engine import (
+    load_previous_state,
+    save_current_state,
+    detect_drift,
+)
+from backend.engine.conversation_engine import handle_query
+from backend.reports.pdf_generator import generate_control_pdf
+
+app = Flask(__name__)
+app.secret_key = "cloudguardian-demo-secret-key"
+
+
+def merge_scan_output(scan_output, signals, resources_map):
+    signals.update(scan_output.get("signals", {}))
+
+    for key, value in scan_output.get("resources", {}).items():
+        if key not in resources_map:
+            resources_map[key] = []
+        resources_map[key].extend(value)
+
+
+def get_connection_details():
+    return {
+        "profile_name": session.get("profile_name") or None,
+        "access_key": session.get("access_key") or None,
+        "secret_key": session.get("secret_key") or None,
+        "region_name": session.get("region_name") or "eu-west-2",
+    }
+
+
+def run_scan():
+    signals = {}
+    resources_map = {}
+    conn = get_connection_details()
+
+    merge_scan_output(
+        get_s3_signals(
+            profile_name=conn["profile_name"],
+            access_key=conn["access_key"],
+            secret_key=conn["secret_key"],
+            region_name=conn["region_name"],
+        ),
+        signals,
+        resources_map,
+    )
+
+    merge_scan_output(
+        get_iam_signals(
+            profile_name=conn["profile_name"],
+            access_key=conn["access_key"],
+            secret_key=conn["secret_key"],
+            region_name=conn["region_name"],
+        ),
+        signals,
+        resources_map,
+    )
+
+    merge_scan_output(
+        get_network_signals(
+            profile_name=conn["profile_name"],
+            access_key=conn["access_key"],
+            secret_key=conn["secret_key"],
+            region_name=conn["region_name"],
+        ),
+        signals,
+        resources_map,
+    )
+
+    previous_signals = load_previous_state()
+    drift = detect_drift(previous_signals, signals)
+
+    controls = load_controls()
+    results = evaluate_controls(signals, controls, resources_map)
+    score_data = calculate_compliance_score(results)
+
+    save_current_state(signals)
+    pdf_path = generate_control_pdf(results, score_data)
+
+    return signals, results, score_data, drift, pdf_path
+
+
+@app.route("/download-pdf")
+def download_pdf():
+    results = session.get("results")
+    score_data = session.get("score_data")
+    if results and score_data:
+        generate_control_pdf(results, score_data)
+    pdf_path = "backend/reports/cloudguardian_evidence_pack.pdf"
+    return send_file(pdf_path, as_attachment=True)
+
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    signals = {}
+    results = session.get("results", {})
+    score_data = session.get("score_data", None)
+    drift = session.get("drift", [])
+    pdf_path = None
+    response = None
+    error = None
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "set_connection":
+            profile_name = request.form.get("profile_name", "").strip()
+            access_key = request.form.get("access_key", "").strip()
+            secret_key = request.form.get("secret_key", "").strip()
+            region_name = request.form.get("region_name", "").strip() or "eu-west-2"
+
+            # Clear all previous scan data when connection changes
+            session.clear()
+            session["profile_name"] = profile_name
+            session["access_key"] = access_key
+            session["secret_key"] = secret_key
+            session["region_name"] = region_name
+
+            results = {}
+            score_data = None
+            drift = []
+
+        elif action == "scan":
+            try:
+                signals, results, score_data, drift, pdf_path = run_scan()
+                session["results"] = results
+                session["score_data"] = score_data
+                session["drift"] = drift
+            except Exception as e:
+                error = f"Scan failed: {str(e)}"
+                results = session.get("results", {})
+                score_data = session.get("score_data", None)
+                drift = session.get("drift", [])
+
+        elif action == "ask":
+            query = request.form.get("query", "").strip()
+            results = session.get("results", {})
+            score_data = session.get("score_data", {})
+            drift = session.get("drift", [])
+            try:
+                response = handle_query(query, results, drift, score_data)
+            except Exception as e:
+                error = f"Query failed: {str(e)}"
+
+    return render_template(
+        "index.html",
+        signals=signals,
+        results=results,
+        score_data=score_data,
+        drift=drift,
+        pdf_path=pdf_path,
+        response=response,
+        error=error,
+        profile_name=session.get("profile_name", ""),
+    )
+
+    return render_template(
+        "index.html",
+        signals=signals,
+        results=results,
+        score_data=score_data,
+        drift=drift,
+        pdf_path=pdf_path,
+        response=response,
+        error=error,
+        profile_name=session.get("profile_name", ""),
+        access_key=session.get("access_key", ""),
+        region_name=session.get("region_name", "eu-west-2"),
+    )
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)

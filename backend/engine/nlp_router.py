@@ -122,6 +122,37 @@ def detect_intent(query):
         "legal view"
     ]):
         return "show_sra"
+    
+    if any(phrase in q for phrase in [
+        "what should i fix",
+        "what do i fix",
+        "fix first",
+        "where do i start",
+        "most important",
+        "highest priority",
+        "what to fix",
+        "priority",
+        "start with",
+        "first step",
+        "what next"
+    ]):
+        return "fix_priority"
+
+    if any(phrase in q for phrase in [
+        "how am i doing",
+        "how are we doing",
+        "where do i stand",
+        "how do i look",
+        "overall status",
+        "am i compliant",
+        "are we compliant",
+        "summary",
+        "overview",
+        "give me a summary",
+        "show summary",
+        "how is my compliance"
+    ]):
+        return "show_score"
 
     return "unknown"
 
@@ -150,5 +181,6 @@ def route_natural_language(query):
 
     if intent == "fix_control" and control_id:
         return f"how do i fix {control_id}"
-
+    if intent == "fix_priority":
+        return "show fix priority"
     return None

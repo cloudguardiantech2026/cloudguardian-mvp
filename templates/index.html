@@ -1,79 +1,419 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CloudGuardian</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 2rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .subtitle {
+            color: #8b949e;
+            margin-bottom: 2rem;
+        }
+
+        .profile-badge {
+            background: #1F3D6B;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: inline-block;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        h2 {
+            color: #58a6ff;
+            font-size: 1.1rem;
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+
+        h3 {
+            color: #e6edf3;
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        label {
+            color: #8b949e;
+            font-size: 0.9rem;
+        }
+
+        input[type=text],
+        input[type=password] {
+            width: 100%;
+            padding: 10px 12px;
+            margin-top: 6px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #e6edf3;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+        }
+
+        input[type=text]:focus,
+        input[type=password]:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+
+        .btn {
+            background: #2E75B6;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: #1F3D6B;
+        }
+
+        .btn-scan {
+            background: #1F3D6B;
+            font-size: 1rem;
+            padding: 12px 28px;
+            width: 100%;
+        }
+
+        .btn-scan:hover {
+            background: #2E75B6;
+        }
+
+        .divider {
+            text-align: center;
+            color: #8b949e;
+            font-weight: bold;
+            margin: 1.2rem 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .score {
+            font-size: 2.8rem;
+            font-weight: bold;
+            color: #58a6ff;
+            margin: 0.5rem 0;
+        }
+
+        .risk {
+            font-size: 1.6rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+
+        .risk.high {
+            color: #f85149;
+        }
+
+        .risk.medium {
+            color: #e3b341;
+        }
+
+        .risk.low {
+            color: #3fb950;
+        }
+
+        .risk.unknown {
+            color: #8b949e;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: #1F3D6B;
+            color: #fff;
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #21262d;
+            vertical-align: top;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .pass {
+            color: #3fb950;
+            font-weight: bold;
+        }
+
+        .fail {
+            color: #f85149;
+            font-weight: bold;
+        }
+
+        .detail {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+
+        .detail p {
+            margin: 0.4rem 0;
+        }
+
+        .detail ul {
+            margin: 0.4rem 0 0.4rem 1.2rem;
+            padding: 0;
+        }
+
+        .detail li {
+            margin-bottom: 0.3rem;
+        }
+
+        .finding-label {
+            color: #8b949e;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 0.6rem;
+        }
+
+        .finding-value {
+            color: #e6edf3;
+            margin-top: 0.2rem;
+        }
+
+        .finding-risk {
+            color: #f85149;
+            margin-top: 0.2rem;
+        }
+
+        .finding-rec {
+            color: #58a6ff;
+            margin-top: 0.2rem;
+        }
+
+        .finding-resource {
+            color: #e3b341;
+            font-style: italic;
+        }
+
+        .pass-detail {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-top: 10px;
+            color: #3fb950;
+            font-size: 0.85rem;
+        }
+
+        .drift-item {
+            padding: 6px 0;
+            border-bottom: 1px solid #21262d;
+            font-size: 0.9rem;
+        }
+
+        .drift-item:last-child {
+            border-bottom: none;
+        }
+
+        .new-risk {
+            color: #f85149;
+        }
+
+        .resolved {
+            color: #3fb950;
+        }
+
+        .changed {
+            color: #e3b341;
+        }
+
+        .ask-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .ask-form input {
+            flex: 1;
+            margin-top: 0;
+        }
+
+        .response {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .response pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: Arial, sans-serif;
+            font-size: 0.9rem;
+            color: #e6edf3;
+            margin: 0;
+        }
+
+        .error-card {
+            background: #2d1515;
+            border: 1px solid #f85149;
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #f85149;
+        }
+
+        .success-card {
+            background: #0d2818;
+            border: 1px solid #3fb950;
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #3fb950;
+        }
+
+        @media (max-width: 600px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ask-form {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
+
 <body>
     <div class="container">
+
+        <!-- Header -->
         <h1>CloudGuardian</h1>
         <p class="subtitle">Cloud compliance intelligence for Cyber Essentials</p>
 
+        {% if current_profile %}
+        <div class="profile-badge">&#x1F4BB; Active account: <strong>{{ current_profile }}</strong></div>
+        {% endif %}
+
+        <!-- Error -->
+        {% if error %}
+        <div class="error-card">&#x26A0; {{ error }}</div>
+        {% endif %}
+
+        <!-- AWS Connection -->
         <div class="card">
             <h2>AWS Connection</h2>
-            <p>Use either a local AWS CLI profile or temporary AWS access keys for this session.</p>
+            <p style="color:#8b949e;font-size:0.9rem;">Connect your AWS account to run a compliance scan. Choose one
+                method below.</p>
 
             <form method="POST">
                 <input type="hidden" name="action" value="set_connection">
 
-                <label><strong>AWS CLI Profile (optional)</strong></label><br>
-                <input type="text" name="profile_name" placeholder="e.g. friend-demo" value="{{ profile_name }}"><br><br>
+                <h3>Option 1 — AWS CLI Profile</h3>
+                <p style="color:#8b949e;font-size:0.85rem;">Use a locally configured AWS profile (e.g. from
+                    <code>aws configure --profile ...</code>)</p>
+                <label>Profile name</label>
+                <input type="text" name="profile_name" placeholder="e.g. oputprojectuser" value="{{ current_profile }}">
 
-                <label><strong>AWS Access Key ID (optional)</strong></label><br>
-                <input type="text" name="access_key" placeholder="AKIA..." value="{{ access_key }}"><br><br>
+                <div class="divider">— or —</div>
 
-                <label><strong>AWS Secret Access Key (optional)</strong></label><br>
-                <input type="password" name="secret_key" placeholder="Enter secret access key"><br><br>
-
-                <label><strong>AWS Region</strong></label><br>
-                <input type="text" name="region_name" placeholder="eu-west-2" value="{{ region_name }}"><br><br>
-
-                <button type="submit" class="btn">Save Connection</button>
+                <h3>Option 2 — Temporary Access Keys</h3>
+                <p style="color:#8b949e;font-size:0.85rem;">For live demos or external accounts. Keys are not stored
+                    permanently.</p>
+                <label>AWS Access Key ID</label>
+                <input type="text" name="access_key" placeholder="AKIA..." value="{{ current_access_key }}">
+                <br><br>
+                <label>AWS Secret Access Key</label>
+                <input type="password" name="secret_key" placeholder="Enter secret access key">
+                <br><br>
+                <label>AWS Region</label>
+                <input type="text" name="region_name" placeholder="eu-west-2" value="{{ current_region }}">
+                <br><br>
+                <button type="submit" class="btn">&#x1F517; Save Connection</button>
             </form>
         </div>
 
-        {% if error %}
-        <div class="card">
-            <h2>Error</h2>
-            <p>{{ error }}</p>
-        </div>
-        {% endif %}
-
+        <!-- Run Scan -->
         <div class="card">
             <form method="POST">
-                <button type="submit" name="action" value="scan" class="btn">Run Compliance Scan</button>
+                <input type="hidden" name="action" value="scan">
+                <button type="submit" class="btn btn-scan">&#x1F50D; Run Compliance Scan</button>
             </form>
         </div>
 
+        <!-- Score + Risk -->
         <div class="grid">
             <div class="card">
                 <h2>Compliance Score</h2>
                 {% if score_data %}
-                    <div class="score">{{ score_data.score }}%</div>
-                    <p>This shows how close your current AWS environment is to the controls CloudGuardian is checking.</p>
+                <div class="score">{{ score_data.score }}%</div>
+                <p style="color:#8b949e;font-size:0.85rem;">How close your AWS environment is to full Cyber Essentials
+                    compliance.</p>
                 {% else %}
-                    <div class="score">No scan yet</div>
-                    <p>Run a scan to see your current compliance position.</p>
+                <div class="score" style="color:#8b949e;">—</div>
+                <p style="color:#8b949e;font-size:0.85rem;">Run a scan to see your compliance score.</p>
                 {% endif %}
             </div>
-
             <div class="card">
                 <h2>Risk Level</h2>
                 {% if score_data %}
-                    <div class="risk {{ score_data.risk_level|lower }}">{{ score_data.risk_level }}</div>
-                    <p>This gives a quick indication of how urgent your current issues are.</p>
+                <div class="risk {{ score_data.risk_level|lower }}">{{ score_data.risk_level }}</div>
+                <p style="color:#8b949e;font-size:0.85rem;">Urgency of current compliance issues.</p>
                 {% else %}
-                    <div class="risk">Unknown</div>
-                    <p>Risk level will appear after a scan is completed.</p>
+                <div class="risk unknown">—</div>
+                <p style="color:#8b949e;font-size:0.85rem;">Risk level will appear after a scan.</p>
                 {% endif %}
             </div>
         </div>
 
+        <!-- Control Results -->
         <div class="card">
             <h2>Control Results</h2>
-
             {% if results %}
             <table>
                 <thead>
@@ -88,110 +428,145 @@
                     <tr>
                         <td>
                             <strong>{{ cid }}</strong><br>
-                            {{ data.name }}
+                            <span style="color:#8b949e;font-size:0.85rem;">{{ data.name }}</span>
 
                             {% if data.status == "FAIL" %}
                             <div class="detail">
-                                <p><strong>What CloudGuardian found:</strong></p>
-                                <p>{{ data.plain_english_fail }}</p>
+                                <div class="finding-label">What we found</div>
+                                <div class="finding-value">{{ data.plain_english_fail }}</div>
 
-                                {% if data.triggered_signals %}
-                                <p><strong>Why this matters:</strong></p>
-                                <ul>
-                                    {% for signal in data.triggered_signals %}
-                                        {% if signal == "IAM_USER_ADMIN_POLICY" %}
-                                            <li>One account has more access than it needs. If that account is compromised, someone could make major changes to your AWS environment.</li>
-                                        {% elif signal == "IAM_USER_MFA_MISSING" %}
-                                            <li>One or more accounts do not use multi-factor authentication. This makes them easier to access if a password is stolen.</li>
-                                        {% elif signal == "ROOT_MFA_DISABLED" %}
-                                            <li>Your main AWS account is not protected with multi-factor authentication.</li>
-                                        {% elif signal == "S3_PUBLIC" %}
-                                            <li>A storage bucket is publicly accessible, which may expose company or customer information.</li>
-                                        {% elif signal == "SG_SSH_OPEN" %}
-                                            <li>One of your systems is reachable from the internet using SSH, which can increase the risk of unwanted access attempts.</li>
-                                        {% elif signal == "SG_RDP_OPEN" %}
-                                            <li>One of your systems is reachable from the internet using Remote Desktop, which can increase remote access risk.</li>
-                                        {% elif signal == "PUBLIC_EXPOSURE" %}
-                                            <li>One or more systems appear reachable from the public internet.</li>
-                                        {% else %}
-                                            <li>{{ signal }}</li>
-                                        {% endif %}
-                                    {% endfor %}
-                                </ul>
-                                {% endif %}
+                                <div class="finding-label">Business risk</div>
+                                <div class="finding-risk">{{ data.risk }}</div>
+
+                                <div class="finding-label">What to do</div>
+                                <div class="finding-rec">{{ data.recommendation }}</div>
 
                                 {% if data.affected_resources %}
-                                <p><strong>Affected resources:</strong></p>
+                                <div class="finding-label">Affected resources</div>
                                 <ul>
                                     {% for resource in data.affected_resources %}
-                                        <li>{{ resource }}</li>
+                                    <li class="finding-resource">{{ resource }}</li>
                                     {% endfor %}
                                 </ul>
                                 {% endif %}
 
-                                <p><strong>What you should do next:</strong></p>
-                                <p>{{ data.recommendation }}</p>
+                                {% if data.triggered_signals %}
+                                <div class="finding-label">Plain-English explanation</div>
+                                <ul>
+                                    {% for signal in data.triggered_signals %}
+                                    {% if signal == "IAM_USER_ADMIN_POLICY" %}
+                                    <li>One or more accounts have full administrator access. If compromised, an attacker
+                                        could control your entire AWS environment.</li>
+                                    {% elif signal == "IAM_USER_MFA_MISSING" %}
+                                    <li>One or more accounts have no second login verification. A stolen password alone
+                                        would be enough to gain access.</li>
+                                    {% elif signal == "ROOT_MFA_DISABLED" %}
+                                    <li>Your main AWS account has no second login verification — this is your
+                                        highest-risk account.</li>
+                                    {% elif signal == "S3_PUBLIC" %}
+                                    <li>A storage bucket is publicly accessible. Anyone on the internet could
+                                        potentially read its contents.</li>
+                                    {% elif signal == "SG_SSH_OPEN" %}
+                                    <li>A system access port (SSH) is open to the entire internet. Attackers can attempt
+                                        entry from anywhere in the world.</li>
+                                    {% elif signal == "SG_RDP_OPEN" %}
+                                    <li>A remote desktop port is open to the entire internet, increasing the risk of
+                                        unauthorised access.</li>
+                                    {% elif signal == "IGW_ATTACHED" %}
+                                    <li>An internet gateway is attached, making systems potentially reachable from
+                                        outside your network.</li>
+                                    {% elif signal == "PUBLIC_ROUTE_EXISTS" %}
+                                    <li>A public network route exists that could expose internal systems to internet
+                                        traffic.</li>
+                                    {% else %}
+                                    <li>{{ signal }}</li>
+                                    {% endif %}
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
 
                                 {% if data.framework_mappings and data.framework_mappings.sra %}
-                                <p><strong>Legal / SRA relevance:</strong></p>
-                                <p>{{ data.framework_mappings.sra.relevance }}</p>
+                                <div class="finding-label">SRA / Legal relevance</div>
+                                <div class="finding-value" style="font-size:0.82rem;">{{
+                                    data.framework_mappings.sra.relevance }}</div>
                                 {% endif %}
                             </div>
+
                             {% else %}
-                            <div class="detail">
-                                <p>This control is currently passing based on the checks CloudGuardian performed.</p>
+                            <div class="pass-detail">
+                                &#x2713; This control is passing — no issues detected in this area.
                             </div>
                             {% endif %}
                         </td>
-
-                        <td class="{{ data.status|lower }}">{{ data.status }}</td>
-                        <td>{{ data.severity }}</td>
+                        <td class="{{ data.status|lower }}" style="white-space:nowrap;">{{ data.status }}</td>
+                        <td style="color:#8b949e;white-space:nowrap;">{{ data.severity }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
             {% else %}
-                <p>No scan results available yet. Run a compliance scan to view results.</p>
+            <p style="color:#8b949e;">No scan results yet. Run a compliance scan to see your control results.</p>
             {% endif %}
         </div>
 
+        <!-- Drift Detection -->
         <div class="card">
             <h2>Changes Since Last Scan</h2>
-
             {% if drift %}
-            <ul>
-                {% for item in drift %}
-                <li>{{ item.type }}: {{ item.signal }} changed from {{ item.from }} to {{ item.to }}</li>
-                {% endfor %}
-            </ul>
+            {% for item in drift %}
+            <div class="drift-item">
+                {% if item.type == "NEW_RISK" %}
+                <span class="new-risk">&#x26A0; New risk:</span>
+                {% elif item.type == "RESOLVED" %}
+                <span class="resolved">&#x2713; Resolved:</span>
+                {% else %}
+                <span class="changed">&#x21BB; Changed:</span>
+                {% endif %}
+                <strong>{{ item.signal }}</strong> — {{ item.from }} &rarr; {{ item.to }}
+            </div>
+            {% endfor %}
             {% else %}
-                <p>No changes detected yet.</p>
+            <p style="color:#8b949e;">
+                {% if results %}No changes detected since the last scan. Your compliance posture is stable.
+                {% else %}Changes will appear here after your second scan.{% endif %}
+            </p>
             {% endif %}
         </div>
 
+        <!-- Ask CloudGuardian -->
         <div class="card">
             <h2>Ask CloudGuardian</h2>
+            <p style="color:#8b949e;font-size:0.85rem;">Ask a question about your compliance results in plain English.
+            </p>
             <form method="POST">
-                <input type="text" name="query" placeholder="e.g. why is my storage failing" required>
-                <button type="submit" name="action" value="ask" class="btn">Ask</button>
+                <input type="hidden" name="action" value="ask">
+                <div class="ask-form">
+                    <input type="text" name="query" placeholder="e.g. what failed? what should I fix first?">
+                    <button type="submit" class="btn">Ask</button>
+                </div>
             </form>
-
             {% if response %}
             <div class="response">
-                <pre>{{ response }}</pre>
+                <div class="response" id="cg-response">
+                    {{ response | safe }}
+                </div>
             </div>
             {% endif %}
         </div>
 
+        <!-- Evidence Pack -->
         <div class="card">
             <h2>Evidence Pack</h2>
-            {% if pdf_path %}
-                <p>Your assessor-ready evidence pack has been generated.</p>
-                <a href="{{ url_for('download_pdf') }}" class="btn">Download PDF Evidence Pack</a>
+            {% if results %}
+            <p style="color:#8b949e;font-size:0.85rem;">Your assessor-ready Cyber Essentials evidence pack is ready to
+                download.</p>
+            <a href="{{ url_for('download_pdf') }}" class="btn">&#x1F4E5; Download PDF Evidence Pack</a>
             {% else %}
-                <p>No evidence pack generated yet. Run a compliance scan first.</p>
+            <p style="color:#8b949e;">Run a compliance scan to generate your evidence pack.</p>
             {% endif %}
         </div>
+
     </div>
 </body>
+
 </html>
