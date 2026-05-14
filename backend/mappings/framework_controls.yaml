@@ -1,4 +1,5 @@
 controls:
+
   CE_1_2:
     name: "Multi-Factor Authentication"
     logic: "ANY_FAIL"
@@ -8,13 +9,16 @@ controls:
       - IAM_USER_ADMIN_POLICY
     severity: "HIGH"
     weight: 35
-    plain_english_fail: "Multi-Factor Authentication or privileged access controls are not fully enforced."
-    risk: "Without MFA or with excessive user permissions, a compromised account could lead to unauthorized administrative access."
-    recommendation: "Enable MFA for the AWS root account, enforce MFA for IAM users, and avoid assigning admin-level permissions directly to users."
+    auto_fail: true
+    plain_english_fail: "Multi-Factor Authentication is not fully enforced. Under Cyber Essentials v3.3 (Danzell, April 2026), failure to enable MFA on any cloud service that supports it is an automatic certification failure."
+    risk: "Without MFA, a stolen or guessed password alone is enough to gain full access to your AWS environment. This is the most common cause of cloud account compromise. Under v3.3 this is an automatic fail — certification cannot be achieved until resolved."
+    recommendation: "Enable MFA for the AWS root account immediately. Enforce MFA for all IAM users. Avoid assigning admin-level permissions directly to users — use roles instead. Under Cyber Essentials v3.3, MFA must be enabled on every cloud service account where the option is available."
     framework_mappings:
       cyber_essentials:
         control_id: "CE_1_2"
         control_name: "Multi-Factor Authentication"
+        version: "v3.3 Danzell (April 2026)"
+        auto_fail_condition: "MFA not enabled on any cloud service account where available"
       sra:
         area: "Access control and information security"
         relevance: "Weak identity and privilege controls may increase the risk of unauthorized access to confidential client information."
@@ -26,13 +30,16 @@ controls:
       - S3_PUBLIC
     severity: "HIGH"
     weight: 35
-    plain_english_fail: "One or more storage resources are publicly accessible."
-    risk: "Sensitive business data may be exposed to the internet."
-    recommendation: "Disable public access on S3 buckets and enable Block Public Access settings."
+    auto_fail: false
+    plain_english_fail: "One or more cloud storage resources are publicly accessible. Under Cyber Essentials v3.3, all cloud services storing or processing organisational data are explicitly in scope and cannot be excluded from assessment."
+    risk: "Sensitive business data may be exposed to the internet. Under v3.3, cloud services can no longer be excluded from Cyber Essentials scope — any publicly accessible storage holding organisational data represents a direct certification failure."
+    recommendation: "Disable public access on all S3 buckets and enable Block Public Access settings across all four dimensions. Review all cloud storage for unnecessary public exposure. Remember that under v3.3, all cloud services are in scope regardless of whether they were previously excluded."
     framework_mappings:
       cyber_essentials:
         control_id: "CE_2_1"
         control_name: "Secure Configuration"
+        version: "v3.3 Danzell (April 2026)"
+        scope_note: "Cloud services storing organisational data are explicitly in scope and cannot be excluded"
       sra:
         area: "Client confidentiality and information security"
         relevance: "Public storage exposure may create confidentiality and data-handling concerns where client or matter information is involved."
@@ -48,13 +55,62 @@ controls:
       - PUBLIC_EXPOSURE
     severity: "HIGH"
     weight: 30
-    plain_english_fail: "One or more workloads appear reachable from the public internet through network exposure or public routing."
-    risk: "Publicly reachable systems increase the likelihood of unauthorized access, scanning, and brute-force attacks."
-    recommendation: "Restrict security group rules, review route tables, avoid unnecessary public IP assignment, and ensure only intended services are internet-facing."
+    auto_fail: true
+    plain_english_fail: "One or more workloads are reachable from the public internet through open network ports or public routing. Under Cyber Essentials v3.3, firewall controls must demonstrably restrict all inbound connections to only those that are necessary."
+    risk: "Publicly reachable systems increase the likelihood of unauthorised access, automated scanning, and brute-force attacks. Open administrative ports (SSH, RDP) exposed to the internet are a critical risk and represent an automatic failure under v3.3 assessment criteria."
+    recommendation: "Restrict all security group rules to only the ports and IP addresses required for legitimate business use. Remove or restrict SSH (port 22) and RDP (port 3389) access to trusted IP addresses only. Review all internet gateway attachments and route tables. Ensure only intended services are internet-facing."
     framework_mappings:
       cyber_essentials:
         control_id: "CE_3_1"
         control_name: "Boundary Firewalls and Internet Gateways"
+        version: "v3.3 Danzell (April 2026)"
       sra:
         area: "Network security and protection of confidential systems"
-        relevance: "Unnecessary public exposure may increase the risk of unauthorized access to systems used to process or store confidential client information."
+        relevance: "Unnecessary public exposure may increase the risk of unauthorised access to systems used to process or store confidential client information."
+
+  CE_4_1:
+    name: "Security Update Management"
+    logic: "ANY_FAIL"
+    requires:
+      - UNPATCHED_CRITICAL_INSTANCE
+      - UNMANAGED_SSM_INSTANCE
+      - EOL_OS_DETECTED
+    severity: "HIGH"
+    weight: 30
+    auto_fail: true
+    plain_english_fail: "One or more systems have critical security updates that have not been applied within 14 days of release, or have unmanaged instances that cannot be verified for patch compliance."
+    risk: "Unpatched systems are the most common entry point for attackers. Under Cyber Essentials v3.3, high-risk and critical patches must be applied within 14 days of release — failure to meet this timeframe results in automatic assessment failure. End-of-life operating systems (e.g. Windows Server 2012) that no longer receive security updates are a direct certification failure."
+    recommendation: "Apply all critical and high severity patches (CVSS score 7.0 or above) within 14 days of release. Enable AWS Systems Manager (SSM Agent) on all EC2 instances to ensure patch compliance can be monitored. Remove or upgrade any end-of-life operating systems that no longer receive vendor security updates. Consider enabling AWS Systems Manager Patch Manager for automated patching workflows."
+    framework_mappings:
+      cyber_essentials:
+        control_id: "CE_4_1"
+        control_name: "Security Update Management"
+        version: "v3.3 Danzell (April 2026)"
+        auto_fail_condition: "Critical patches not applied within 14 days of release"
+        patch_severity_threshold: "CVSS v3 base score >= 7.0 or vendor-rated Critical/High"
+      sra:
+        area: "System security and vulnerability management"
+        relevance: "Unpatched systems processing or storing client data represent an elevated risk of data breach and regulatory non-compliance."
+
+  CE_5_1:
+    name: "Malware Protection"
+    logic: "ANY_FAIL"
+    requires:
+      - GUARDDUTY_DISABLED
+      - GUARDDUTY_ACTIVE_MALWARE_FINDING
+      - GUARDDUTY_S3_PROTECTION_DISABLED
+    severity: "HIGH"
+    weight: 30
+    auto_fail: false
+    plain_english_fail: "Malware protection is not fully enabled or active malware findings have not been remediated. Under Cyber Essentials v3.3, organisations must prevent malicious code execution through anti-malware software, application sandboxing, or allow-listing."
+    risk: "Without active malware protection, malicious software could be executed on your cloud workloads or introduced through file uploads to cloud storage. Active GuardDuty malware findings that remain unresolved represent an ongoing security incident."
+    recommendation: "Enable Amazon GuardDuty in all active AWS regions. Enable GuardDuty Malware Protection for S3 if your organisation stores user-uploaded files. Investigate and remediate any active malware findings within 24 hours. For serverless (Lambda) and containerised (Fargate/ECS) workloads, these are compliant by design under the application sandboxing provision of v3.3."
+    framework_mappings:
+      cyber_essentials:
+        control_id: "CE_5_1"
+        control_name: "Malware Protection"
+        version: "v3.3 Danzell (April 2026)"
+        compliant_by_design: "Lambda and Fargate workloads satisfy sandboxing requirement by architecture"
+      sra:
+        area: "Security monitoring and incident response"
+        relevance: "Malware incidents affecting systems holding client data may trigger data breach notification obligations and professional conduct concerns."

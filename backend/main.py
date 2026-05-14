@@ -14,6 +14,8 @@ print(f"Using AWS region: {region_name}")
 from .scanners.aws_s3 import get_s3_signals
 from .scanners.aws_iam import get_iam_signals
 from .scanners.aws_network import get_network_signals
+from .scanners.aws_ssm import get_ssm_signals
+from .scanners.aws_guardduty import get_guardduty_signals
 from .engine.framework_engine import load_controls, evaluate_controls, calculate_compliance_score
 from .engine.drift_engine import load_previous_state, save_current_state, detect_drift
 from .engine.conversation_engine import handle_query
@@ -36,6 +38,19 @@ merge_scan_output(get_s3_signals(profile_name=profile_name), signals, resources_
 merge_scan_output(get_iam_signals(profile_name=profile_name), signals, resources_map)
 merge_scan_output(
     get_network_signals(profile_name=profile_name, region_name=region_name),
+    signals,
+    resources_map
+)
+
+merge_scan_output(
+    get_ssm_signals(profile_name=profile_name,
+                    region_name=region_name),
+    signals,
+    resources_map
+)
+merge_scan_output(
+    get_guardduty_signals(profile_name=profile_name,
+                          region_name=region_name),
     signals,
     resources_map
 )

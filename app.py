@@ -7,6 +7,8 @@ from flask import Flask, render_template, request, send_file, session
 from backend.scanners.aws_s3 import get_s3_signals
 from backend.scanners.aws_iam import get_iam_signals
 from backend.scanners.aws_network import get_network_signals
+from backend.scanners.aws_ssm import get_ssm_signals
+from backend.scanners.aws_guardduty import get_guardduty_signals
 from backend.engine.framework_engine import (
     load_controls, evaluate_controls, calculate_compliance_score,
 )
@@ -67,7 +69,8 @@ def run_scan(profile_name, access_key, secret_key, region_name):
     signals = {}
     resources_map = {}
 
-    for scanner in [get_s3_signals, get_iam_signals, get_network_signals]:
+    for scanner in [get_s3_signals, get_iam_signals, get_network_signals,
+                get_ssm_signals, get_guardduty_signals]:
         merge_scan_output(
             scanner(
                 profile_name=profile_name or None,
