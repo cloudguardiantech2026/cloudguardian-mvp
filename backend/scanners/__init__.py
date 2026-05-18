@@ -1,4 +1,4 @@
-from scanners.azure import (
+from backend.scanners.azure import (
     azure_ce1_firewall,
     azure_ce2_secure_config,
     azure_ce3_access_control,
@@ -23,6 +23,6 @@ def run_azure_scan():
                 "control": module.__name__,
                 "resource": "scanner",
                 "status": "ERROR",
-                "detail": str(e)
+                "detail": str(e),
             })
     return results
