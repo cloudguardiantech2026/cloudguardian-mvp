@@ -147,15 +147,6 @@ def scan_azure():
         return jsonify({"error": str(e)}), 500
     
 
-@app.route("/debug/azure-env")
-def debug_azure_env():
-    import os
-    return {
-        "AZURE_TENANT_ID":       "SET" if os.environ.get("AZURE_TENANT_ID") else "MISSING",
-        "AZURE_CLIENT_ID":       "SET" if os.environ.get("AZURE_CLIENT_ID") else "MISSING",
-        "AZURE_CLIENT_SECRET":   "SET" if os.environ.get("AZURE_CLIENT_SECRET") else "MISSING",
-        "AZURE_SUBSCRIPTION_ID": "SET" if os.environ.get("AZURE_SUBSCRIPTION_ID") else "MISSING",
-    }
 
 
 @app.route("/", methods=["GET", "POST"])
