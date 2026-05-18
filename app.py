@@ -9,11 +9,11 @@ from backend.scanners.aws_network import get_network_signals
 from backend.scanners.aws_ssm import get_ssm_signals
 from backend.scanners.aws_guardduty import get_guardduty_signals
 
-from backend.scanners.azure_ce1_firewall import scan as azure_ce1
-from backend.scanners.azure_ce2_secure_config import scan as azure_ce2
-from backend.scanners.azure_ce3_access_control import scan as azure_ce3
-from backend.scanners.azure_ce4_malware import scan as azure_ce4
-from backend.scanners.azure_ce5_patching import scan as azure_ce5
+from backend.scanners.azure.azure_ce1_firewall import scan as azure_ce1
+from backend.scanners.azure.azure_ce2_secure_config import scan as azure_ce2
+from backend.scanners.azure.azure_ce3_access_control import scan as azure_ce3
+from backend.scanners.azure.azure_ce4_malware import scan as azure_ce4
+from backend.scanners.azure.azure_ce5_patching import scan as azure_ce5
 
 from backend.engine.framework_engine import (
     load_controls, evaluate_controls, calculate_compliance_score,
