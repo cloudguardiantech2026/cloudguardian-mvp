@@ -11,3 +11,9 @@ markdown
 gunicorn
 pyyaml
 reportlab
+azure-identity==1.16.0
+azure-mgmt-network==25.3.0
+azure-mgmt-compute==30.4.0
+azure-mgmt-security==5.0.0
+azure-mgmt-monitor==6.0.1
+azure-mgmt-resource==23.0.0

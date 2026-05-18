@@ -1,14 +1,20 @@
-
-
 import json
 import os
 import markdown
-from flask import Flask, render_template, request, send_file, session
+from flask import Flask, render_template, request, send_file, session, jsonify
+
 from backend.scanners.aws_s3 import get_s3_signals
 from backend.scanners.aws_iam import get_iam_signals
 from backend.scanners.aws_network import get_network_signals
 from backend.scanners.aws_ssm import get_ssm_signals
 from backend.scanners.aws_guardduty import get_guardduty_signals
+
+from backend.scanners.azure_ce1_firewall import scan as azure_ce1
+from backend.scanners.azure_ce2_secure_config import scan as azure_ce2
+from backend.scanners.azure_ce3_access_control import scan as azure_ce3
+from backend.scanners.azure_ce4_malware import scan as azure_ce4
+from backend.scanners.azure_ce5_patching import scan as azure_ce5
+
 from backend.engine.framework_engine import (
     load_controls, evaluate_controls, calculate_compliance_score,
 )
@@ -40,7 +46,6 @@ def load_scan_cache(current_profile):
     try:
         with open(SCAN_CACHE_PATH, "r") as f:
             data = json.load(f)
-        # Only return cache if it matches the active profile
         if data.get("profile_name", "").strip() == current_profile.strip():
             return data
         return None
@@ -65,12 +70,12 @@ def merge_scan_output(scan_output, signals, resources_map):
 
 
 def run_scan(profile_name, access_key, secret_key, region_name):
-    """Run a full scan with explicit credentials — no session dependency."""
+    """Run a full AWS scan with explicit credentials — no session dependency."""
     signals = {}
     resources_map = {}
 
     for scanner in [get_s3_signals, get_iam_signals, get_network_signals,
-                get_ssm_signals, get_guardduty_signals]:
+                    get_ssm_signals, get_guardduty_signals]:
         merge_scan_output(
             scanner(
                 profile_name=profile_name or None,
@@ -89,8 +94,29 @@ def run_scan(profile_name, access_key, secret_key, region_name):
     score_data = calculate_compliance_score(results)
     save_current_state(signals, profile_name)
     generate_control_pdf(results, score_data)
-
     return results, score_data, drift
+
+
+def run_azure_scan(tenant_id, client_id, client_secret, subscription_id):
+    """Run all five Azure Cyber Essentials scanners and return a flat results list."""
+    os.environ["AZURE_TENANT_ID"]       = tenant_id
+    os.environ["AZURE_CLIENT_ID"]       = client_id
+    os.environ["AZURE_CLIENT_SECRET"]   = client_secret
+    os.environ["AZURE_SUBSCRIPTION_ID"] = subscription_id
+
+    results = []
+    for scanner in [azure_ce1, azure_ce2, azure_ce3, azure_ce4, azure_ce5]:
+        try:
+            results.extend(scanner())
+        except Exception as e:
+            results.append({
+                "provider": "azure",
+                "control": scanner.__name__,
+                "resource": "scanner",
+                "status": "ERROR",
+                "detail": str(e),
+            })
+    return results
 
 
 @app.route("/download-pdf")
@@ -101,6 +127,35 @@ def download_pdf():
         generate_control_pdf(cache["results"], cache["score_data"])
     pdf_path = "backend/reports/cloudguardian_evidence_pack.pdf"
     return send_file(pdf_path, as_attachment=True)
+
+
+@app.route("/scan/azure", methods=["POST"])
+def scan_azure():
+    data = request.get_json(silent=True) or {}
+    tenant_id       = data.get("tenant_id",       "").strip()
+    client_id       = data.get("client_id",       "").strip()
+    client_secret   = data.get("client_secret",   "").strip()
+    subscription_id = data.get("subscription_id", "").strip()
+
+    if not all([tenant_id, client_id, client_secret, subscription_id]):
+        return jsonify({"error": "All four Azure credentials are required."}), 400
+
+    try:
+        results = run_azure_scan(tenant_id, client_id, client_secret, subscription_id)
+        return jsonify({"provider": "azure", "results": results})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+@app.route("/debug/azure-env")
+def debug_azure_env():
+    import os
+    return {
+        "AZURE_TENANT_ID":       "SET" if os.environ.get("AZURE_TENANT_ID") else "MISSING",
+        "AZURE_CLIENT_ID":       "SET" if os.environ.get("AZURE_CLIENT_ID") else "MISSING",
+        "AZURE_CLIENT_SECRET":   "SET" if os.environ.get("AZURE_CLIENT_SECRET") else "MISSING",
+        "AZURE_SUBSCRIPTION_ID": "SET" if os.environ.get("AZURE_SUBSCRIPTION_ID") else "MISSING",
+    }
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -146,6 +201,7 @@ def index():
             query = request.form.get("query", "").strip()
             current_profile = session.get("profile_name", "").strip()
             cache = load_scan_cache(current_profile)
+
             if cache:
                 try:
                     response = handle_query(
@@ -163,7 +219,6 @@ def index():
     # ── Render ─────────────────────────────────────────────────────
     current_profile = session.get("profile_name", "").strip()
     cache = load_scan_cache(current_profile)
-
     results    = cache["results"]    if cache else {}
     score_data = cache["score_data"] if cache else None
     drift      = cache["drift"]      if cache else []
