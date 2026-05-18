@@ -357,7 +357,7 @@
             color: #fff;
         }
 
-        /* ── Azure loading state ── */
+        /* ── Azure loading ── */
         .azure-scanning {
             display: none;
             text-align: center;
@@ -366,9 +366,12 @@
             font-size: 0.95rem;
         }
 
-        /* ── Azure results table ── */
-        #azure-results-section {
-            display: none;
+        /* ── Score mini cards ── */
+        .score-mini {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #58a6ff;
+            margin: 0.5rem 0;
         }
 
         @media (max-width: 600px) {
@@ -386,7 +389,6 @@
 <body>
     <div class="container">
 
-        <!-- Header -->
         <h1>CloudGuardian</h1>
         <p class="subtitle">Cloud compliance intelligence for Cyber Essentials</p>
 
@@ -394,7 +396,6 @@
         <div class="profile-badge">&#x1F4BB; Active account: <strong>{{ current_profile }}</strong></div>
         {% endif %}
 
-        <!-- Error -->
         {% if error %}
         <div class="error-card">&#x26A0; {{ error }}</div>
         {% endif %}
@@ -406,29 +407,22 @@
         </div>
 
         <!-- ══════════════════════════════════════════════════
-         AWS PANEL (existing behaviour, unchanged)
+         AWS PANEL
     ══════════════════════════════════════════════════ -->
         <div id="aws-panel">
 
-            <!-- AWS Connection -->
             <div class="card">
                 <h2>AWS Connection</h2>
-                <p style="color:#8b949e;font-size:0.9rem;">Connect your AWS account to run a compliance scan. Choose one
-                    method below.</p>
+                <p style="color:#8b949e;font-size:0.9rem;">Connect your AWS account to run a compliance scan.</p>
                 <form method="POST">
                     <input type="hidden" name="action" value="set_connection">
                     <h3>Option 1 — AWS CLI Profile</h3>
-                    <p style="color:#8b949e;font-size:0.85rem;">Use a locally configured AWS profile (e.g. from
-                        <code>aws configure --profile ...</code>)</p>
+                    <p style="color:#8b949e;font-size:0.85rem;">Use a locally configured AWS profile.</p>
                     <label>Profile name</label>
                     <input type="text" name="profile_name" placeholder="e.g. oputprojectuser"
                         value="{{ current_profile }}">
-
                     <div class="divider">— or —</div>
-
                     <h3>Option 2 — Temporary Access Keys</h3>
-                    <p style="color:#8b949e;font-size:0.85rem;">For live demos or external accounts. Keys are not stored
-                        permanently.</p>
                     <label>AWS Access Key ID</label>
                     <input type="text" name="access_key" placeholder="AKIA..." value="{{ current_access_key }}">
                     <br><br>
@@ -442,7 +436,6 @@
                 </form>
             </div>
 
-            <!-- Run AWS Scan -->
             <div class="card">
                 <form method="POST">
                     <input type="hidden" name="action" value="scan">
@@ -450,7 +443,6 @@
                 </form>
             </div>
 
-            <!-- Score + Risk -->
             <div class="grid">
                 <div class="card">
                     <h2>Compliance Score</h2>
@@ -475,7 +467,6 @@
                 </div>
             </div>
 
-            <!-- AWS Control Results -->
             <div class="card">
                 <h2>Control Results</h2>
                 {% if results %}
@@ -503,42 +494,32 @@
                                     <div class="finding-rec">{{ data.recommendation }}</div>
                                     {% if data.affected_resources %}
                                     <div class="finding-label">Affected resources</div>
-                                    <ul>
-                                        {% for resource in data.affected_resources %}
-                                        <li class="finding-resource">{{ resource }}</li>
-                                        {% endfor %}
-                                    </ul>
+                                    <ul>{% for resource in data.affected_resources %}<li class="finding-resource">{{
+                                            resource }}</li>{% endfor %}</ul>
                                     {% endif %}
                                     {% if data.triggered_signals %}
                                     <div class="finding-label">Plain-English explanation</div>
                                     <ul>
                                         {% for signal in data.triggered_signals %}
-                                        {% if signal == "IAM_USER_ADMIN_POLICY" %}
-                                        <li>One or more accounts have full administrator access. If compromised, an
-                                            attacker could control your entire AWS environment.</li>
-                                        {% elif signal == "IAM_USER_MFA_MISSING" %}
-                                        <li>One or more accounts have no second login verification. A stolen password
-                                            alone would be enough to gain access.</li>
-                                        {% elif signal == "ROOT_MFA_DISABLED" %}
-                                        <li>Your main AWS account has no second login verification — this is your
-                                            highest-risk account.</li>
-                                        {% elif signal == "S3_PUBLIC" %}
-                                        <li>A storage bucket is publicly accessible. Anyone on the internet could
-                                            potentially read its contents.</li>
-                                        {% elif signal == "SG_SSH_OPEN" %}
-                                        <li>A system access port (SSH) is open to the entire internet. Attackers can
-                                            attempt entry from anywhere in the world.</li>
-                                        {% elif signal == "SG_RDP_OPEN" %}
-                                        <li>A remote desktop port is open to the entire internet, increasing the risk of
-                                            unauthorised access.</li>
-                                        {% elif signal == "IGW_ATTACHED" %}
-                                        <li>An internet gateway is attached, making systems potentially reachable from
-                                            outside your network.</li>
-                                        {% elif signal == "PUBLIC_ROUTE_EXISTS" %}
-                                        <li>A public network route exists that could expose internal systems to internet
-                                            traffic.</li>
-                                        {% else %}
-                                        <li>{{ signal }}</li>
+                                        {% if signal == "IAM_USER_ADMIN_POLICY" %}<li>One or more accounts have full
+                                            administrator access. If compromised, an attacker could control your entire
+                                            AWS environment.</li>
+                                        {% elif signal == "IAM_USER_MFA_MISSING" %}<li>One or more accounts have no
+                                            second login verification. A stolen password alone would be enough to gain
+                                            access.</li>
+                                        {% elif signal == "ROOT_MFA_DISABLED" %}<li>Your main AWS account has no second
+                                            login verification — this is your highest-risk account.</li>
+                                        {% elif signal == "S3_PUBLIC" %}<li>A storage bucket is publicly accessible.
+                                            Anyone on the internet could potentially read its contents.</li>
+                                        {% elif signal == "SG_SSH_OPEN" %}<li>A system access port (SSH) is open to the
+                                            entire internet.</li>
+                                        {% elif signal == "SG_RDP_OPEN" %}<li>A remote desktop port is open to the
+                                            entire internet.</li>
+                                        {% elif signal == "IGW_ATTACHED" %}<li>An internet gateway is attached, making
+                                            systems potentially reachable from outside your network.</li>
+                                        {% elif signal == "PUBLIC_ROUTE_EXISTS" %}<li>A public network route exists that
+                                            could expose internal systems to internet traffic.</li>
+                                        {% else %}<li>{{ signal }}</li>
                                         {% endif %}
                                         {% endfor %}
                                     </ul>
@@ -550,8 +531,7 @@
                                     {% endif %}
                                 </div>
                                 {% else %}
-                                <div class="pass-detail">&#x2713; This control is passing — no issues detected in this
-                                    area.</div>
+                                <div class="pass-detail">&#x2713; This control is passing — no issues detected.</div>
                                 {% endif %}
                             </td>
                             <td class="{{ data.status|lower }}" style="white-space:nowrap;">{{ data.status }}</td>
@@ -565,34 +545,26 @@
                 {% endif %}
             </div>
 
-            <!-- Drift Detection -->
             <div class="card">
                 <h2>Changes Since Last Scan</h2>
                 {% if drift %}
                 {% for item in drift %}
                 <div class="drift-item">
-                    {% if item.type == "NEW_RISK" %}
-                    <span class="new-risk">&#x26A0; New risk:</span>
-                    {% elif item.type == "RESOLVED" %}
-                    <span class="resolved">&#x2713; Resolved:</span>
-                    {% else %}
-                    <span class="changed">&#x21BB; Changed:</span>
-                    {% endif %}
+                    {% if item.type == "NEW_RISK" %}<span class="new-risk">&#x26A0; New risk:</span>
+                    {% elif item.type == "RESOLVED" %}<span class="resolved">&#x2713; Resolved:</span>
+                    {% else %}<span class="changed">&#x21BB; Changed:</span>{% endif %}
                     <strong>{{ item.signal }}</strong> — {{ item.from }} &rarr; {{ item.to }}
                 </div>
                 {% endfor %}
                 {% else %}
-                <p style="color:#8b949e;">
-                    {% if results %}No changes detected since the last scan. Your compliance posture is stable.
-                    {% else %}Changes will appear here after your second scan.{% endif %}
-                </p>
+                <p style="color:#8b949e;">{% if results %}No changes detected since the last scan.{% else %}Changes will
+                    appear here after your second scan.{% endif %}</p>
                 {% endif %}
             </div>
 
-            <!-- Ask CloudGuardian -->
             <div class="card">
                 <h2>Ask CloudGuardian</h2>
-                <p style="color:#8b949e;font-size:0.85rem;">Ask a question about your compliance results in plain
+                <p style="color:#8b949e;font-size:0.85rem;">Ask a question about your AWS compliance results in plain
                     English.</p>
                 <form method="POST">
                     <input type="hidden" name="action" value="ask">
@@ -608,13 +580,12 @@
                 {% endif %}
             </div>
 
-            <!-- Evidence Pack -->
             <div class="card">
                 <h2>Evidence Pack</h2>
                 {% if results %}
                 <p style="color:#8b949e;font-size:0.85rem;">Your assessor-ready Cyber Essentials evidence pack is ready
                     to download.</p>
-                <a href="{{ url_for('download_pdf') }}" class="btn">&#x1F4E5; Download PDF Evidence Pack</a>
+                <a href="{{ url_for('download_pdf') }}" class="btn">&#x1F4E5; Download AWS PDF Evidence Pack</a>
                 {% else %}
                 <p style="color:#8b949e;">Run a compliance scan to generate your evidence pack.</p>
                 {% endif %}
@@ -624,16 +595,14 @@
 
 
         <!-- ══════════════════════════════════════════════════
-         AZURE PANEL (new)
+         AZURE PANEL
     ══════════════════════════════════════════════════ -->
         <div id="azure-panel" style="display:none;">
 
-            <!-- Azure Connection -->
             <div class="card">
                 <h2>Azure Connection</h2>
                 <p style="color:#8b949e;font-size:0.9rem;">Enter your Service Principal credentials to scan your Azure
-                    subscription for Cyber Essentials compliance.</p>
-
+                    subscription.</p>
                 <label>Tenant ID</label>
                 <input type="text" id="az-tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
                 <br><br>
@@ -647,17 +616,31 @@
                 <input type="text" id="az-subscription-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
             </div>
 
-            <!-- Run Azure Scan -->
             <div class="card">
                 <button class="btn btn-scan" onclick="runAzureScan()">&#x1F50D; Run Azure Compliance Scan</button>
-                <div class="azure-scanning" id="azure-scanning">
-                    &#x23F3; Scanning your Azure environment — this may take 30–60 seconds...
-                </div>
-                <div id="azure-error" style="display:none; margin-top:1rem;" class="error-card"></div>
+                <div class="azure-scanning" id="azure-scanning">&#x23F3; Scanning your Azure environment — this may take
+                    30–60 seconds...</div>
+                <div id="azure-error" style="display:none;margin-top:1rem;" class="error-card"></div>
             </div>
 
-            <!-- Azure Results -->
-            <div id="azure-results-section">
+            <!-- Azure Score + Risk (shown after scan) -->
+            <div id="azure-score-section" style="display:none;">
+                <div class="grid">
+                    <div class="card">
+                        <h2>Azure Compliance Score</h2>
+                        <div class="score-mini" id="azure-score-value">—</div>
+                        <p style="color:#8b949e;font-size:0.85rem;" id="azure-cert-status"></p>
+                    </div>
+                    <div class="card">
+                        <h2>Risk Level</h2>
+                        <div class="risk unknown" id="azure-risk-value">—</div>
+                        <p style="color:#8b949e;font-size:0.85rem;">Urgency of current Azure compliance issues.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Azure Results Table -->
+            <div id="azure-results-section" style="display:none;">
                 <div class="card">
                     <h2>Azure Control Results</h2>
                     <table>
@@ -674,12 +657,37 @@
                 </div>
             </div>
 
+            <!-- Ask CloudGuardian — Azure -->
+            <div id="azure-ask-section" style="display:none;">
+                <div class="card">
+                    <h2>Ask CloudGuardian — Azure</h2>
+                    <p style="color:#8b949e;font-size:0.85rem;">Ask a question about your Azure compliance results in
+                        plain English.</p>
+                    <div class="ask-form">
+                        <input type="text" id="azure-query" placeholder="e.g. what failed? what should I fix first?">
+                        <button class="btn" onclick="askAzure()">Ask</button>
+                    </div>
+                    <div id="azure-response" style="display:none;" class="response"></div>
+                    <div id="azure-ask-error" style="display:none;margin-top:0.5rem;" class="error-card"></div>
+                </div>
+            </div>
+
+            <!-- Azure Evidence Pack -->
+            <div id="azure-pdf-section" style="display:none;">
+                <div class="card">
+                    <h2>Evidence Pack</h2>
+                    <p style="color:#8b949e;font-size:0.85rem;">Your assessor-ready Azure Cyber Essentials evidence pack
+                        is ready to download.</p>
+                    <a href="/download-pdf/azure" class="btn">&#x1F4E5; Download Azure PDF Evidence Pack</a>
+                </div>
+            </div>
+
         </div><!-- /azure-panel -->
 
     </div><!-- /container -->
 
     <script>
-        // ── Provider tab switching ──────────────────────────────────────
+        // ── Provider switching ─────────────────────────────────────────────────────
         function switchProvider(provider) {
             document.getElementById('aws-panel').style.display = provider === 'aws' ? 'block' : 'none';
             document.getElementById('azure-panel').style.display = provider === 'azure' ? 'block' : 'none';
@@ -687,7 +695,7 @@
             document.getElementById('tab-azure').classList.toggle('active', provider === 'azure');
         }
 
-        // ── Azure scan ─────────────────────────────────────────────────
+        // ── Azure scan ─────────────────────────────────────────────────────────────
         async function runAzureScan() {
             const tenantId = document.getElementById('az-tenant-id').value.trim();
             const clientId = document.getElementById('az-client-id').value.trim();
@@ -705,19 +713,19 @@
 
             document.getElementById('azure-scanning').style.display = 'block';
             document.getElementById('azure-results-section').style.display = 'none';
+            document.getElementById('azure-score-section').style.display = 'none';
+            document.getElementById('azure-ask-section').style.display = 'none';
+            document.getElementById('azure-pdf-section').style.display = 'none';
 
             try {
                 const res = await fetch('/scan/azure', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        tenant_id: tenantId,
-                        client_id: clientId,
-                        client_secret: clientSecret,
-                        subscription_id: subscriptionId,
+                        tenant_id: tenantId, client_id: clientId,
+                        client_secret: clientSecret, subscription_id: subscriptionId,
                     })
                 });
-
                 const data = await res.json();
                 document.getElementById('azure-scanning').style.display = 'none';
 
@@ -727,7 +735,11 @@
                     return;
                 }
 
+                renderAzureScore(data.score_data || {});
                 renderAzureResults(data.results || []);
+
+                document.getElementById('azure-ask-section').style.display = 'block';
+                document.getElementById('azure-pdf-section').style.display = 'block';
 
             } catch (err) {
                 document.getElementById('azure-scanning').style.display = 'none';
@@ -736,30 +748,78 @@
             }
         }
 
+        function renderAzureScore(scoreData) {
+            document.getElementById('azure-score-value').textContent = (scoreData.score ?? '—') + '%';
+            document.getElementById('azure-cert-status').textContent = scoreData.certification_status || '';
+            const riskEl = document.getElementById('azure-risk-value');
+            const risk = (scoreData.risk_level || 'unknown').toLowerCase();
+            riskEl.textContent = scoreData.risk_level || '—';
+            riskEl.className = 'risk ' + risk;
+            document.getElementById('azure-score-section').style.display = 'block';
+        }
+
         function renderAzureResults(results) {
             const tbody = document.getElementById('azure-results-body');
             tbody.innerHTML = '';
-
             if (!results.length) {
-                tbody.innerHTML = '<tr><td colspan="4" style="color:#8b949e;">No results returned. Check credentials and try again.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" style="color:#8b949e;">No results returned.</td></tr>';
             } else {
                 results.forEach(r => {
                     const statusClass = (r.status || '').toLowerCase();
-                    const row = `<tr>
+                    tbody.insertAdjacentHTML('beforeend', `<tr>
                     <td style="font-size:0.85rem;">${escHtml(r.control || '')}</td>
                     <td style="color:#e3b341;font-size:0.85rem;font-style:italic;">${escHtml(r.resource || '')}</td>
                     <td class="${statusClass}" style="white-space:nowrap;">${escHtml(r.status || '')}</td>
                     <td style="font-size:0.85rem;color:#8b949e;">${escHtml(r.detail || '')}</td>
-                </tr>`;
-                    tbody.insertAdjacentHTML('beforeend', row);
+                </tr>`);
                 });
             }
-
             document.getElementById('azure-results-section').style.display = 'block';
         }
 
+        // ── Ask CloudGuardian — Azure ──────────────────────────────────────────────
+        async function askAzure() {
+            const query = document.getElementById('azure-query').value.trim();
+            const respBox = document.getElementById('azure-response');
+            const errBox = document.getElementById('azure-ask-error');
+            respBox.style.display = 'none';
+            errBox.style.display = 'none';
+
+            if (!query) return;
+
+            try {
+                const res = await fetch('/ask/azure', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                const data = await res.json();
+
+                if (data.error) {
+                    errBox.textContent = '⚠ ' + data.error;
+                    errBox.style.display = 'block';
+                    return;
+                }
+
+                respBox.innerHTML = data.response;
+                respBox.style.display = 'block';
+
+            } catch (err) {
+                errBox.textContent = '⚠ Request failed: ' + err.message;
+                errBox.style.display = 'block';
+            }
+        }
+
+        // Allow Enter key in Azure ask input
+        document.addEventListener('DOMContentLoaded', () => {
+            const qi = document.getElementById('azure-query');
+            if (qi) qi.addEventListener('keydown', e => { if (e.key === 'Enter') askAzure(); });
+        });
+
         function escHtml(str) {
-            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            return String(str)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
     </script>
 </body>
