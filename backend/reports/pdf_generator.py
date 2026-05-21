@@ -289,7 +289,7 @@ def generate_control_pdf(results, score_data, provider="AWS",
                      else colors.HexColor('#1F3D6B'))
 
         header_data = [[
-            Paragraph(f"<b>{control_id} — {name}</b>",
+                      Paragraph(f"<b>{name}</b>",
                       ParagraphStyle('ch', parent=styles['Normal'],
                                      fontSize=11, textColor=colors.white,
                                      fontName='Helvetica-Bold')),
