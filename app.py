@@ -55,7 +55,6 @@ def load_scan_cache(current_profile):
 
 
 def save_azure_cache(azure_results, azure_score_data):
-    """Store Azure results separately so they survive alongside AWS cache."""
     path = "backend/state/azure_cache.json"
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
@@ -92,10 +91,6 @@ def merge_scan_output(scan_output, signals, resources_map):
 # ── Azure score + LLM helpers ──────────────────────────────────────────────────
 
 def calculate_azure_score(azure_results):
-    """
-    Convert flat Azure results list into a score_data dict
-    compatible with the existing score/risk shape.
-    """
     total = len(azure_results)
     if total == 0:
         return {
@@ -110,7 +105,6 @@ def calculate_azure_score(azure_results):
     warned = sum(1 for r in azure_results if r.get("status") == "WARN")
     score  = round((passed / total) * 100, 2)
 
-    # CE3 MFA FAIL is an auto-fail under CE v3.3 Danzell
     auto_fail = any(
         r.get("status") == "FAIL" and "CE3" in r.get("control", "")
         for r in azure_results
@@ -139,40 +133,48 @@ def calculate_azure_score(azure_results):
 
 def azure_results_for_llm(azure_results):
     """
-    Convert flat Azure list into the dict shape handle_query() expects.
-    Mirrors the AWS results dict structure.
+    Convert flat Azure list into the dict shape handle_query() and
+    generate_control_pdf() expect.
+
+    FIX: key uses index (not resource name) so the resource name
+    does not bleed into the control header in the PDF.
     """
     out = {}
-    for r in azure_results:
-        key = f"{r.get('control', 'unknown')}_{r.get('resource', 'unknown')}"
+    for i, r in enumerate(azure_results):
+        # Use zero-padded index to keep keys unique and clean
+        key = f"{r.get('control', 'unknown')}_{i:03d}"
         out[key] = {
-            "name":              r.get("control", ""),
-            "status":            r.get("status", "UNKNOWN"),
-            "severity":          "HIGH" if r.get("status") == "FAIL" else "MEDIUM",
-            "weight":            20,
-            "auto_fail":         "CE3" in r.get("control", "") and r.get("status") == "FAIL",
-            "signals_checked":   [],
-            "triggered_signals": [],
-            "signal_states":     {},
+            "name":               r.get("control", ""),
+            "status":             r.get("status", "UNKNOWN"),
+            "severity":           "HIGH" if r.get("status") == "FAIL" else "MEDIUM",
+            "weight":             20,
+            "auto_fail":          "CE3" in r.get("control", "") and r.get("status") == "FAIL",
+            "signals_checked":    [],
+            "triggered_signals":  [],
+            "signal_states":      {},
             "affected_resources": [r.get("resource", "")] if r.get("resource") else [],
             "plain_english_fail": r.get("detail", ""),
-            "risk":              r.get("detail", ""),
-            "recommendation":    "",
+            "risk":               r.get("detail", ""),
+            "recommendation":     "",
             "framework_mappings": {},
         }
     return out
 
 
 def generate_azure_pdf(azure_results, azure_score_data):
-    """Generate a PDF evidence pack from Azure results."""
+    """
+    Generate a PDF evidence pack from Azure results.
+    FIX: passes provider='Azure' so all wording, timeline, and
+    footer in the PDF are Azure-specific — no AWS wording.
+    """
     llm_shaped = azure_results_for_llm(azure_results)
-    generate_control_pdf(llm_shaped, azure_score_data)
+    generate_control_pdf(llm_shaped, azure_score_data, provider="Azure")
 
 
 # ── AWS scan ───────────────────────────────────────────────────────────────────
 
 def run_scan(profile_name, access_key, secret_key, region_name):
-    signals      = {}
+    signals       = {}
     resources_map = {}
 
     for scanner in [get_s3_signals, get_iam_signals, get_network_signals,
@@ -194,7 +196,7 @@ def run_scan(profile_name, access_key, secret_key, region_name):
     results          = evaluate_controls(signals, controls, resources_map)
     score_data       = calculate_compliance_score(results)
     save_current_state(signals, profile_name)
-    generate_control_pdf(results, score_data)
+    generate_control_pdf(results, score_data, provider="AWS")
     return results, score_data, drift
 
 
@@ -228,9 +230,10 @@ def download_pdf():
     current_profile = session.get("profile_name", "")
     cache = load_scan_cache(current_profile)
     if cache:
-        generate_control_pdf(cache["results"], cache["score_data"])
+        generate_control_pdf(cache["results"], cache["score_data"], provider="AWS")
     pdf_path = "backend/reports/cloudguardian_evidence_pack.pdf"
-    return send_file(pdf_path, as_attachment=True)
+    return send_file(pdf_path, as_attachment=True,
+                     download_name="cloudguardian_aws_evidence_pack.pdf")
 
 
 @app.route("/download-pdf/azure")
