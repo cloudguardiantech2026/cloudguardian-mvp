@@ -247,6 +247,32 @@ def download_pdf_azure():
                      download_name="cloudguardian_azure_evidence_pack.pdf")
 
 
+@app.route("/download-pdf/ce-prep")
+def download_pdf_ce_prep():
+    current_profile = session.get("profile_name", "")
+    cache = load_scan_cache(current_profile)
+    if not cache:
+        return "No AWS scan results found. Run a scan first.", 404
+    from backend.reports.pdf_generator import generate_ce_prep_report
+    generate_ce_prep_report(cache["results"], cache["score_data"], provider="AWS")
+    return send_file("backend/reports/cloudguardian_ce_prep_report.pdf",
+                     as_attachment=True,
+                     download_name="cloudguardian_ce_prep_report_aws.pdf")
+
+
+@app.route("/download-pdf/ce-prep/azure")
+def download_pdf_ce_prep_azure():
+    cache = load_azure_cache()
+    if not cache:
+        return "No Azure scan results found. Run an Azure scan first.", 404
+    from backend.reports.pdf_generator import generate_ce_prep_report
+    llm_shaped = azure_results_for_llm(cache["azure_results"])
+    generate_ce_prep_report(llm_shaped, cache["azure_score_data"], provider="Azure")
+    return send_file("backend/reports/cloudguardian_ce_prep_report.pdf",
+                     as_attachment=True,
+                     download_name="cloudguardian_ce_prep_report_azure.pdf")
+
+
 @app.route("/scan/azure", methods=["POST"])
 def scan_azure():
     data            = request.get_json(silent=True) or {}
