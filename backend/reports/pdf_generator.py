@@ -9,45 +9,45 @@ from reportlab.platypus import (
 from datetime import datetime, timezone
 
 
-# ── Provider-specific content maps ────────────────────────────────────────────
+# ── Provider-specific content ──────────────────────────────────────────────────
 
 AWS_TIMELINE = [
-    ["Check",               "API Called",                           "Performed At",   "Valid Until"],
-    ["S3 Public Access",    "s3api get-public-access-block",        None,             None],
-    ["IAM MFA Status",      "iam list-mfa-devices",                 None,             None],
-    ["IAM Privilege Check", "iam list-attached-user-policies",      None,             None],
-    ["Security Groups",     "ec2 describe-security-groups",         None,             None],
-    ["Internet Gateway",    "ec2 describe-internet-gateways",       None,             None],
-    ["Route Tables",        "ec2 describe-route-tables",            None,             None],
-    ["SSM Patch Status",    "ssm describe-instance-patch-states",   None,             None],
-    ["GuardDuty Findings",  "guardduty list-findings",              None,             None],
+    ["Check",               "AWS API Called",                        "Performed At", "Valid Until"],
+    ["S3 Public Access",    "s3api get-public-access-block",         None, None],
+    ["IAM MFA Status",      "iam list-mfa-devices",                  None, None],
+    ["IAM Privilege Check", "iam list-attached-user-policies",       None, None],
+    ["Security Groups",     "ec2 describe-security-groups",          None, None],
+    ["Internet Gateway",    "ec2 describe-internet-gateways",        None, None],
+    ["Route Tables",        "ec2 describe-route-tables",             None, None],
+    ["SSM Patch Status",    "ssm describe-instance-patch-states",    None, None],
+    ["GuardDuty Findings",  "guardduty list-findings",               None, None],
 ]
 
 AZURE_TIMELINE = [
-    ["Check",                    "API Called",                                          "Performed At", "Valid Until"],
-    ["NSG Inbound Rules",        "network.security_groups.list_all()",                  None,           None],
-    ["VM Public IP Exposure",    "compute.virtual_machines.list_all()",                 None,           None],
-    ["Entra ID MFA Status",      "graph.microsoft.com/v1.0/users/authentication",       None,           None],
-    ["Defender Assessments",     "security.assessments.list()",                         None,           None],
-    ["VM Patch Mode",            "compute.virtual_machines.list_all() → osProfile",     None,           None],
-    ["NIC Configuration",        "network.network_interfaces.get()",                    None,           None],
+    ["Check",                 "Azure SDK / Graph API Call",                       "Performed At", "Valid Until"],
+    ["NSG Inbound Rules",     "network.security_groups.list_all()",               None, None],
+    ["VM Public IP Exposure", "compute.virtual_machines.list_all()",              None, None],
+    ["Entra ID MFA Status",   "graph.microsoft.com/v1.0/users/authentication",    None, None],
+    ["Defender Assessments",  "security.assessments.list()",                      None, None],
+    ["VM Patch Mode",         "compute.virtual_machines.list_all() → osProfile",  None, None],
+    ["NIC Configuration",     "network.network_interfaces.get()",                 None, None],
 ]
 
 AWS_ASSESSOR_NOTE = (
     "<b>Note for assessors:</b> CloudGuardian performs automated AWS API calls on each scan "
-    "cycle. All calls are read-only (Describe, List, Get). No changes are made to the "
-    "customer environment. Scans can be triggered on-demand; each evidence pack is "
-    "timestamped to the second and reflects the live infrastructure state at the moment "
-    "of generation. This satisfies the Cyber Essentials v3.3 requirement for demonstrable, "
-    "current evidence of control implementation."
+    "cycle. All calls are read-only (Describe, List, Get). No changes are made to the customer "
+    "environment. Scans can be triggered on-demand; each evidence pack is timestamped to the "
+    "second and reflects the live infrastructure state at the moment of generation. This "
+    "satisfies the Cyber Essentials v3.3 requirement for demonstrable, current evidence of "
+    "control implementation."
 )
 
 AZURE_ASSESSOR_NOTE = (
     "<b>Note for assessors:</b> CloudGuardian performs automated Azure REST API calls on each "
     "scan cycle using a read-only Service Principal with Reader role. All calls use the "
     "azure-mgmt-network, azure-mgmt-compute, azure-mgmt-security, and Microsoft Graph APIs. "
-    "No changes are made to the customer environment. Scans can be triggered on-demand; "
-    "each evidence pack is timestamped to the second and reflects the live Azure infrastructure "
+    "No changes are made to the customer environment. Scans can be triggered on-demand; each "
+    "evidence pack is timestamped to the second and reflects the live Azure infrastructure "
     "state at the moment of generation. This satisfies the Cyber Essentials v3.3 requirement "
     "for demonstrable, current evidence of control implementation."
 )
@@ -81,8 +81,143 @@ WARN_LEGEND = (
     "may indicate a compliance gap that a CE assessor will query."
 )
 
+# ── IASME question mappings ────────────────────────────────────────────────────
+# Each entry maps a CloudGuardian CE control to the IASME question(s) it answers.
 
-# ── Main generator ────────────────────────────────────────────────────────────
+CE_QUESTION_MAPPINGS = {
+    "firewall": {
+        "questions": [
+            ("A4.1",  "Do you have firewalls at the boundaries between your organisation's internal networks and the internet?"),
+            ("A4.7",  "Is your firewall configured to allow unauthenticated inbound connections?"),
+            ("A4.9",  "Are your boundary firewalls configured to allow access to their configuration settings over the internet?"),
+        ],
+        "control_label": "CE1 — Boundary Firewalls",
+        "pass_prefix":   "CloudGuardian scan confirmed:",
+        "fail_prefix":   "CloudGuardian scan detected an issue:",
+        "warn_prefix":   "CloudGuardian scan returned a warning:",
+    },
+    "secure_config": {
+        "questions": [
+            ("A5.3",  "Have you changed the default password for all user and administrator accounts?"),
+            ("A5.4",  "Do you run or host external services that provide access to data to users across the internet?"),
+            ("A5.5",  "Which authentication option do you use for external services?"),
+        ],
+        "control_label": "CE2 — Secure Configuration",
+        "pass_prefix":   "CloudGuardian scan confirmed:",
+        "fail_prefix":   "CloudGuardian scan detected an issue:",
+        "warn_prefix":   "CloudGuardian scan returned a warning:",
+    },
+    "user_access": {
+        "questions": [
+            ("A7.14", "Do all of your cloud services have multi-factor authentication (MFA) available?"),
+            ("A7.16", "Has MFA been applied to all administrators of your cloud services?"),
+            ("A7.17", "Has MFA been applied to all users of your cloud services?"),
+        ],
+        "control_label": "CE3 — User Access Control & MFA",
+        "pass_prefix":   "CloudGuardian scan confirmed:",
+        "fail_prefix":   "CloudGuardian scan detected an AUTO-FAIL condition:",
+        "warn_prefix":   "CloudGuardian scan returned a warning:",
+    },
+    "malware": {
+        "questions": [
+            ("A8.1",  "Are all of your devices protected from malware?"),
+            ("A8.2",  "Where you have anti-malware software installed, is it set to update and prevent malware from running?"),
+        ],
+        "control_label": "CE4 — Malware Protection",
+        "pass_prefix":   "CloudGuardian scan confirmed:",
+        "fail_prefix":   "CloudGuardian scan detected an issue:",
+        "warn_prefix":   "CloudGuardian scan returned a warning:",
+    },
+    "patching": {
+        "questions": [
+            ("A6.1",   "Are all operating systems on your devices supported by a vendor that produces regular security updates?"),
+            ("A6.4",   "Are all high-risk or critical security updates installed within 14 days of release?"),
+            ("A6.4.1", "Are all updates applied for operating systems by enabling auto updates?"),
+        ],
+        "control_label": "CE5 — Patch Management",
+        "pass_prefix":   "CloudGuardian scan confirmed:",
+        "fail_prefix":   "CloudGuardian scan detected an issue:",
+        "warn_prefix":   "CloudGuardian scan returned a warning:",
+    },
+}
+
+# Maps control name keywords to CE_QUESTION_MAPPINGS keys
+CONTROL_KEY_MAP = {
+    "firewall":      "firewall",
+    "ce1":           "firewall",
+    "boundary":      "firewall",
+    "secure":        "secure_config",
+    "ce2":           "secure_config",
+    "configuration": "secure_config",
+    "user":          "user_access",
+    "ce3":           "user_access",
+    "access":        "user_access",
+    "mfa":           "user_access",
+    "malware":       "malware",
+    "ce4":           "malware",
+    "defender":      "malware",
+    "patch":         "patching",
+    "ce5":           "patching",
+    "management":    "patching",
+}
+
+
+def _resolve_control_key(control_name):
+    """Map a control name string to a CE_QUESTION_MAPPINGS key."""
+    name_lower = control_name.lower()
+    for keyword, key in CONTROL_KEY_MAP.items():
+        if keyword in name_lower:
+            return key
+    return None
+
+
+def _build_prep_answer(control_data, control_key, scan_timestamp, affected_resources):
+    """Build the suggested answer text for a CE prep question based on scan result."""
+    status  = control_data.get("status", "UNKNOWN")
+    detail  = control_data.get("plain_english_fail", "") or control_data.get("detail", "")
+    mapping = CE_QUESTION_MAPPINGS.get(control_key, {})
+
+    if status == "PASS":
+        prefix = mapping.get("pass_prefix", "CloudGuardian scan confirmed:")
+        answer = (
+            f"{prefix} No issues detected for this control as of {scan_timestamp}. "
+            f"This control is currently passing."
+        )
+        bg     = colors.HexColor('#E8F5EE')
+        badge  = "✓ READY TO SUBMIT"
+        badge_color = colors.HexColor('#1A7A4A')
+
+    elif status == "FAIL":
+        prefix = mapping.get("fail_prefix", "CloudGuardian scan detected an issue:")
+        res    = f" Affected resources: {', '.join(affected_resources)}." if affected_resources else ""
+        answer = (
+            f"{prefix} {detail}{res} "
+            f"Scan performed: {scan_timestamp}. This issue must be resolved before answering Yes."
+        )
+        bg     = colors.HexColor('#FDEAEA')
+        badge  = "✗ NEEDS ATTENTION BEFORE SUBMITTING"
+        badge_color = colors.HexColor('#A32D2D')
+
+    elif status == "WARN":
+        prefix = mapping.get("warn_prefix", "CloudGuardian scan returned a warning:")
+        answer = (
+            f"{prefix} {detail} "
+            f"Scan performed: {scan_timestamp}. Investigate this finding before submitting."
+        )
+        bg     = colors.HexColor('#FFF8E7')
+        badge  = "⚠ INVESTIGATE BEFORE SUBMITTING"
+        badge_color = colors.HexColor('#7F6000')
+
+    else:
+        answer      = f"No data available for this control. Run a CloudGuardian scan to generate an answer."
+        bg          = colors.HexColor('#F5F5F5')
+        badge       = "— NO DATA"
+        badge_color = colors.HexColor('#888888')
+
+    return answer, bg, badge, badge_color
+
+
+# ── Main evidence pack ─────────────────────────────────────────────────────────
 
 def generate_control_pdf(results, score_data, provider="AWS",
                          output_path="backend/reports/cloudguardian_evidence_pack.pdf"):
@@ -90,36 +225,31 @@ def generate_control_pdf(results, score_data, provider="AWS",
     Generate a Cyber Essentials evidence pack PDF.
 
     Args:
-        results:     dict of control results (AWS shape) or flat list (Azure shape)
+        results:     dict of control results
         score_data:  dict with score, risk_level, certification_status, auto_fail_triggered
-        provider:    "AWS" or "Azure" — controls all provider-specific wording
+        provider:    "AWS" or "Azure"
         output_path: output file path
     """
-
     provider_label = provider.upper()
     is_azure       = provider_label == "AZURE"
 
     scan_time      = datetime.now(timezone.utc)
     scan_timestamp = scan_time.strftime("%d %B %Y at %H:%M:%S UTC")
     valid_until    = scan_time.strftime("%d %B %Y at %H:%M UTC") + " +24hrs"
-
     validity_note  = (
         f"This assessment reflects the live state of your {provider} environment at the time "
         f"of scan. Assessment validity: 24 hours from scan time."
     )
 
     doc = SimpleDocTemplate(
-        output_path,
-        pagesize=A4,
-        rightMargin=20 * mm,
-        leftMargin=20 * mm,
-        topMargin=20 * mm,
-        bottomMargin=20 * mm,
+        output_path, pagesize=A4,
+        rightMargin=20*mm, leftMargin=20*mm,
+        topMargin=20*mm, bottomMargin=20*mm,
     )
 
     styles = getSampleStyleSheet()
 
-    title_style   = ParagraphStyle('CGTitle',   parent=styles['Title'],
+    title_style    = ParagraphStyle('CGTitle',    parent=styles['Title'],
         fontSize=22, textColor=colors.HexColor('#1F3D6B'), spaceAfter=4)
     subtitle_style = ParagraphStyle('CGSubtitle', parent=styles['Normal'],
         fontSize=11, textColor=colors.HexColor('#555566'), spaceAfter=2)
@@ -142,7 +272,7 @@ def generate_control_pdf(results, score_data, provider="AWS",
 
     story = []
 
-    # ── HEADER ────────────────────────────────────────────────────────────────
+    # Header
     story.append(Paragraph("CloudGuardian", title_style))
     story.append(Paragraph(
         f"Cyber Essentials Cloud Compliance Evidence Pack — {provider}", subtitle_style))
@@ -153,11 +283,11 @@ def generate_control_pdf(results, score_data, provider="AWS",
     # Timestamp banner
     ts_data = [[
         Paragraph(f"<b>Scan performed:</b> {scan_timestamp}",
-                  ParagraphStyle('tsb', parent=styles['Normal'], fontSize=10,
-                                 textColor=colors.HexColor('#1A1A2E'))),
+                  ParagraphStyle('tsb', parent=styles['Normal'],
+                                 fontSize=10, textColor=colors.HexColor('#1A1A2E'))),
         Paragraph(f"<b>Assessment valid until:</b> {valid_until}",
-                  ParagraphStyle('tsv', parent=styles['Normal'], fontSize=10,
-                                 textColor=colors.HexColor('#1A1A2E'), alignment=2)),
+                  ParagraphStyle('tsv', parent=styles['Normal'],
+                                 fontSize=10, textColor=colors.HexColor('#1A1A2E'), alignment=2)),
     ]]
     ts_table = Table(ts_data, colWidths=[270, 190])
     ts_table.setStyle(TableStyle([
@@ -171,12 +301,12 @@ def generate_control_pdf(results, score_data, provider="AWS",
     story.append(HRFlowable(width="100%", thickness=2,
                              color=colors.HexColor('#2E75B6'), spaceAfter=16))
 
-    # ── EXECUTIVE SUMMARY ─────────────────────────────────────────────────────
+    # Executive summary
     story.append(Paragraph("Executive Summary", section_style))
 
-    score              = score_data.get("score", 0)
-    risk               = score_data.get("risk_level", "UNKNOWN")
-    cert_status        = score_data.get("certification_status", "UNKNOWN")
+    score               = score_data.get("score", 0)
+    risk                = score_data.get("risk_level", "UNKNOWN")
+    cert_status         = score_data.get("certification_status", "UNKNOWN")
     auto_fail_triggered = score_data.get("auto_fail_triggered", False)
 
     passed             = [cid for cid, d in results.items() if d.get("status") == "PASS"]
@@ -185,31 +315,31 @@ def generate_control_pdf(results, score_data, provider="AWS",
     auto_fail_controls = [cid for cid, d in results.items() if d.get("auto_fail", False)]
 
     summary_data = [
-        ["Metric",                "Value"],
-        ["Compliance Score",      f"{score}%"],
-        ["Risk Level",            risk],
-        ["Controls Passed",       str(len(passed))],
-        ["Controls Failed",       str(len(failed))],
-        ["Controls with Warnings", str(len(warned))],
-        ["Auto-fail Conditions",  str(len(auto_fail_controls)) if auto_fail_controls else "None"],
-        ["Cloud Provider",        provider],
-        ["Assessment Framework",  "Cyber Essentials v3.3 (Danzell)"],
-        ["Certification Status",  cert_status],
-        ["Scan Timestamp",        scan_timestamp],
-        ["Assessment Valid For",  "24 hours from scan time"],
+        ["Metric",                  "Value"],
+        ["Compliance Score",        f"{score}%"],
+        ["Risk Level",              risk],
+        ["Controls Passed",         str(len(passed))],
+        ["Controls Failed",         str(len(failed))],
+        ["Controls with Warnings",  str(len(warned))],
+        ["Auto-fail Conditions",    str(len(auto_fail_controls)) if auto_fail_controls else "None"],
+        ["Cloud Provider",          provider],
+        ["Assessment Framework",    "Cyber Essentials v3.3 (Danzell)"],
+        ["Certification Status",    cert_status],
+        ["Scan Timestamp",          scan_timestamp],
+        ["Assessment Valid For",    "24 hours from scan time"],
     ]
 
     summary_table = Table(summary_data, colWidths=[160, 300])
     summary_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0),  colors.HexColor('#1F3D6B')),
-        ("TEXTCOLOR",  (0, 0), (-1, 0),  colors.white),
-        ("FONTNAME",   (0, 0), (-1, 0),  "Helvetica-Bold"),
-        ("FONTSIZE",   (0, 0), (-1, 0),  10),
-        ("FONTNAME",   (0, 1), (0, -1),  "Helvetica-Bold"),
-        ("FONTSIZE",   (0, 1), (-1, -1), 10),
-        ("TEXTCOLOR",  (0, 1), (-1, -1), colors.HexColor('#1A1A2E')),
-        ("GRID",       (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
-        ("PADDING",    (0, 0), (-1, -1), 8),
+        ("BACKGROUND",     (0, 0), (-1, 0),  colors.HexColor('#1F3D6B')),
+        ("TEXTCOLOR",      (0, 0), (-1, 0),  colors.white),
+        ("FONTNAME",       (0, 0), (-1, 0),  "Helvetica-Bold"),
+        ("FONTSIZE",       (0, 0), (-1, 0),  10),
+        ("FONTNAME",       (0, 1), (0, -1),  "Helvetica-Bold"),
+        ("FONTSIZE",       (0, 1), (-1, -1), 10),
+        ("TEXTCOLOR",      (0, 1), (-1, -1), colors.HexColor('#1A1A2E')),
+        ("GRID",           (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
+        ("PADDING",        (0, 0), (-1, -1), 8),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1),
          [colors.HexColor('#EEF3FB'), colors.white]),
     ]))
@@ -219,12 +349,12 @@ def generate_control_pdf(results, score_data, provider="AWS",
     # WARN legend
     story.append(Paragraph(WARN_LEGEND, legend_style))
 
-    # Auto-fail warning banner
+    # Auto-fail banner
     if auto_fail_triggered:
+        clean_ids = [k.rsplit('_', 1)[0] for k in auto_fail_controls]
         af_data = [[Paragraph(
             f"⚠ AUTO-FAIL CONDITION DETECTED — Cyber Essentials v3.3 certification is blocked. "
-            f"The following controls triggered automatic failure criteria: "
-            f"{', '.join(auto_fail_controls)}. "
+            f"The following controls triggered automatic failure criteria: {', '.join(clean_ids)}. "
             f"These must be resolved before certification can be achieved.",
             ParagraphStyle('afb', parent=styles['Normal'], fontSize=10,
                            textColor=colors.white, fontName='Helvetica-Bold'))]]
@@ -241,32 +371,29 @@ def generate_control_pdf(results, score_data, provider="AWS",
         meaning = (
             "One or more AUTO-FAIL conditions have been detected. Under Cyber Essentials v3.3 "
             "(Danzell, April 2026), these conditions result in immediate certification failure "
-            "regardless of other controls. Immediate remediation is required before any "
-            "Cyber Essentials assessment can succeed."
+            "regardless of other controls. Immediate remediation is required."
         )
     elif risk == "HIGH":
         meaning = (
-            "One or more HIGH severity issues were identified. These represent significant "
-            "compliance gaps that must be addressed before Cyber Essentials v3.3 certification "
-            "can be achieved. Immediate remediation is recommended."
+            "One or more HIGH severity issues were identified. These must be addressed before "
+            "Cyber Essentials v3.3 certification can be achieved."
         )
     elif risk == "MEDIUM":
         meaning = (
-            "Some issues were identified that should be improved to strengthen your security "
-            "posture. Cyber Essentials v3.3 certification may be achievable after addressing "
-            "these findings."
+            "Some issues were identified that should be improved. Certification may be achievable "
+            "after addressing these findings."
         )
     else:
         meaning = (
-            "No major issues were identified in the areas assessed. Your environment "
-            "demonstrates a strong Cyber Essentials v3.3 compliance posture."
+            "No major issues were identified. Your environment demonstrates a strong Cyber "
+            "Essentials v3.3 compliance posture."
         )
 
     story.append(Paragraph(meaning, body_style))
     story.append(HRFlowable(width="100%", thickness=1,
                              color=colors.HexColor('#CCCCCC'), spaceAfter=8))
 
-    # ── CONTROL RESULTS ───────────────────────────────────────────────────────
+    # Control results
     story.append(Paragraph("Control Evaluation Results", section_style))
     story.append(Paragraph(
         f"The following section details the outcome of each Cyber Essentials v3.3 control "
@@ -289,7 +416,7 @@ def generate_control_pdf(results, score_data, provider="AWS",
                      else colors.HexColor('#1F3D6B'))
 
         header_data = [[
-                      Paragraph(f"<b>{name}</b>",
+            Paragraph(f"<b>{name}</b>",
                       ParagraphStyle('ch', parent=styles['Normal'],
                                      fontSize=11, textColor=colors.white,
                                      fontName='Helvetica-Bold')),
@@ -328,9 +455,7 @@ def generate_control_pdf(results, score_data, provider="AWS",
         elif status == "WARN":
             warn_data = [[Paragraph(
                 "⚠  This control returned a warning. The check could not be completed "
-                "conclusively — typically because a required service is not enabled or "
-                "insufficient permissions were available. This finding should be investigated "
-                "before submitting for CE assessment.",
+                "conclusively. This finding should be investigated before submitting for CE assessment.",
                 ParagraphStyle('wp', parent=styles['Normal'],
                                fontSize=10, textColor=colors.HexColor('#7F6000')))]]
             warn_table = Table(warn_data, colWidths=[460])
@@ -340,11 +465,9 @@ def generate_control_pdf(results, score_data, provider="AWS",
                 ("GRID",       (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
             ]))
             story.append(warn_table)
-
-            # Show detail if available
             detail = data.get("plain_english_fail", "") or data.get("risk", "")
             if detail:
-                warn_detail = [[
+                wd = [[
                     Paragraph("<b>Detail:</b>",
                               ParagraphStyle('wdl', parent=styles['Normal'], fontSize=9,
                                              textColor=colors.HexColor('#555566'),
@@ -353,15 +476,15 @@ def generate_control_pdf(results, score_data, provider="AWS",
                               ParagraphStyle('wdv', parent=styles['Normal'], fontSize=10,
                                              textColor=colors.HexColor('#1A1A2E')))
                 ]]
-                warn_detail_table = Table(warn_detail, colWidths=[120, 340])
-                warn_detail_table.setStyle(TableStyle([
+                wd_table = Table(wd, colWidths=[120, 340])
+                wd_table.setStyle(TableStyle([
                     ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor('#FFF8E7')),
                     ("BACKGROUND", (0, 0), (0, -1),  colors.HexColor('#FFF0C0')),
                     ("VALIGN",     (0, 0), (-1, -1), "TOP"),
                     ("PADDING",    (0, 0), (-1, -1), 8),
                     ("GRID",       (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
                 ]))
-                story.append(warn_detail_table)
+                story.append(wd_table)
 
         else:
             detail_rows = []
@@ -372,13 +495,12 @@ def generate_control_pdf(results, score_data, provider="AWS",
                               ParagraphStyle('dlaf', parent=styles['Normal'], fontSize=9,
                                              textColor=colors.white, fontName='Helvetica-Bold',
                                              backColor=colors.HexColor('#A32D2D'))),
-                    Paragraph(
-                        "This control has triggered an automatic failure condition under "
-                        "Cyber Essentials v3.3 (Danzell). Certification cannot be achieved "
-                        "until this is resolved.",
-                        ParagraphStyle('dvaf', parent=styles['Normal'], fontSize=10,
-                                       textColor=colors.white,
-                                       backColor=colors.HexColor('#A32D2D')))
+                    Paragraph("This control has triggered an automatic failure condition under "
+                               "Cyber Essentials v3.3 (Danzell). Certification cannot be "
+                               "achieved until this is resolved.",
+                              ParagraphStyle('dvaf', parent=styles['Normal'], fontSize=10,
+                                             textColor=colors.white,
+                                             backColor=colors.HexColor('#A32D2D')))
                 ])
 
             plain = data.get("plain_english_fail", "")
@@ -464,36 +586,35 @@ def generate_control_pdf(results, score_data, provider="AWS",
 
                 detail_table = Table(detail_rows, colWidths=[120, 340])
                 detail_table.setStyle(TableStyle([
-                    ("BACKGROUND", (0, 0), (-1, -1), row_bg),
-                    ("BACKGROUND", (0, 0), (0, -1),  row_label_bg),
-                    ("VALIGN",     (0, 0), (-1, -1), "TOP"),
-                    ("PADDING",    (0, 0), (-1, -1), 8),
-                    ("GRID",       (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
+                    ("BACKGROUND",     (0, 0), (-1, -1), row_bg),
+                    ("BACKGROUND",     (0, 0), (0, -1),  row_label_bg),
+                    ("VALIGN",         (0, 0), (-1, -1), "TOP"),
+                    ("PADDING",        (0, 0), (-1, -1), 8),
+                    ("GRID",           (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
                     ("ROWBACKGROUNDS", (0, 0), (-1, -1),
                      [row_bg, colors.HexColor('#FDF0F0')]),
                 ]))
                 story.append(detail_table)
 
-    # ── VULNERABILITY TIMELINE ────────────────────────────────────────────────
+    # API call timeline
     story.append(Spacer(1, 16))
     story.append(HRFlowable(width="100%", thickness=1,
                              color=colors.HexColor('#CCCCCC'), spaceAfter=8))
     story.append(Paragraph("Assessment API Call Timeline", section_style))
     story.append(Paragraph(
-        f"The following table demonstrates to your Cyber Essentials assessor that "
-        f"CloudGuardian performs on-demand compliance scanning against your live "
-        f"{provider} environment. Each check was performed at the scan time shown "
-        f"below using read-only API calls — no changes were made to your environment.",
+        f"The following table demonstrates to your Cyber Essentials assessor that CloudGuardian "
+        f"performs on-demand compliance scanning against your live {provider} environment. "
+        f"Each check was performed at the scan time shown below using read-only API calls — "
+        f"no changes were made to your environment.",
         body_style
     ))
 
     timeline_rows = AZURE_TIMELINE if is_azure else AWS_TIMELINE
-    api_col_header = "Azure SDK / Graph API Call" if is_azure else "AWS API Called"
-
-    table_data = []
+    api_col       = "Azure SDK / Graph API Call" if is_azure else "AWS API Called"
+    table_data    = []
     for i, row in enumerate(timeline_rows):
         if i == 0:
-            table_data.append([row[0], api_col_header, row[2], row[3]])
+            table_data.append([row[0], api_col, row[2], row[3]])
         else:
             table_data.append([
                 row[0], row[1], scan_timestamp,
@@ -515,18 +636,341 @@ def generate_control_pdf(results, score_data, provider="AWS",
     ]))
     story.append(timeline_table)
     story.append(Spacer(1, 8))
+    story.append(Paragraph(
+        AZURE_ASSESSOR_NOTE if is_azure else AWS_ASSESSOR_NOTE, assessor_style))
 
-    assessor_note = AZURE_ASSESSOR_NOTE if is_azure else AWS_ASSESSOR_NOTE
-    story.append(Paragraph(assessor_note, assessor_style))
-
-    # ── FOOTER ────────────────────────────────────────────────────────────────
+    # Footer
     story.append(Spacer(1, 16))
     story.append(HRFlowable(width="100%", thickness=1,
                              color=colors.HexColor('#CCCCCC'), spaceAfter=8))
-
     footer_text = AZURE_FOOTER if is_azure else AWS_FOOTER
     story.append(Paragraph(
         f"<b>About this report:</b> {footer_text} Scan completed: {scan_timestamp}.",
+        footer_style
+    ))
+
+    doc.build(story)
+    return output_path
+
+
+# ── CE Preparation Report ──────────────────────────────────────────────────────
+
+def generate_ce_prep_report(results, score_data, provider="AWS",
+                             output_path="backend/reports/cloudguardian_ce_prep_report.pdf"):
+    """
+    Generate a CE Questionnaire Preparation Report.
+
+    Maps CloudGuardian scan findings to specific IASME CE v3.3 question numbers,
+    providing SMEs with evidence-backed suggested answers ready to copy-paste
+    into the IASME assessment platform.
+
+    Args:
+        results:     dict of control results (same shape as generate_control_pdf)
+        score_data:  dict with score, risk_level, etc.
+        provider:    "AWS" or "Azure"
+        output_path: output file path
+    """
+    scan_time      = datetime.now(timezone.utc)
+    scan_timestamp = scan_time.strftime("%d %B %Y at %H:%M:%S UTC")
+
+    doc = SimpleDocTemplate(
+        output_path, pagesize=A4,
+        rightMargin=20*mm, leftMargin=20*mm,
+        topMargin=20*mm, bottomMargin=20*mm,
+    )
+
+    styles = getSampleStyleSheet()
+
+    title_style    = ParagraphStyle('PRTitle',    parent=styles['Title'],
+        fontSize=22, textColor=colors.HexColor('#1F3D6B'), spaceAfter=4)
+    subtitle_style = ParagraphStyle('PRSubtitle', parent=styles['Normal'],
+        fontSize=11, textColor=colors.HexColor('#555566'), spaceAfter=2)
+    section_style  = ParagraphStyle('PRSection',  parent=styles['Heading2'],
+        fontSize=13, textColor=colors.HexColor('#2E75B6'), spaceBefore=16, spaceAfter=8)
+    body_style     = ParagraphStyle('PRBody',     parent=styles['BodyText'],
+        fontSize=10, textColor=colors.HexColor('#1A1A2E'), spaceAfter=6)
+    small_style    = ParagraphStyle('PRSmall',    parent=styles['Normal'],
+        fontSize=8,  textColor=colors.HexColor('#555566'), spaceAfter=4)
+    q_style        = ParagraphStyle('PRQ',        parent=styles['Normal'],
+        fontSize=10, textColor=colors.HexColor('#1F3D6B'), fontName='Helvetica-Bold',
+        spaceBefore=6, spaceAfter=4)
+    answer_style   = ParagraphStyle('PRAnswer',   parent=styles['Normal'],
+        fontSize=10, textColor=colors.HexColor('#1A1A2E'), spaceAfter=4)
+    manual_style   = ParagraphStyle('PRManual',   parent=styles['Normal'],
+        fontSize=9,  textColor=colors.HexColor('#555566'),
+        backColor=colors.HexColor('#F5F5F5'),
+        leftIndent=8, rightIndent=8, spaceBefore=2, spaceAfter=6)
+    footer_style   = ParagraphStyle('PRFooter',   parent=styles['Normal'],
+        fontSize=8,  textColor=colors.HexColor('#555566'))
+
+    story = []
+
+    # Header
+    story.append(Paragraph("CloudGuardian", title_style))
+    story.append(Paragraph(
+        f"CE Questionnaire Preparation Report — {provider}", subtitle_style))
+    story.append(Paragraph(
+        "Framework: IASME Cyber Essentials v3.3 — Danzell (April 2026)", subtitle_style))
+    story.append(Spacer(1, 6))
+
+    ts_data = [[
+        Paragraph(f"<b>Scan performed:</b> {scan_timestamp}",
+                  ParagraphStyle('tsb2', parent=styles['Normal'],
+                                 fontSize=10, textColor=colors.HexColor('#1A1A2E'))),
+        Paragraph(f"<b>Cloud provider:</b> {provider}",
+                  ParagraphStyle('tsv2', parent=styles['Normal'],
+                                 fontSize=10, textColor=colors.HexColor('#1A1A2E'), alignment=2)),
+    ]]
+    ts_table = Table(ts_data, colWidths=[270, 190])
+    ts_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor('#EEF3FB')),
+        ("PADDING",    (0, 0), (-1, -1), 8),
+        ("GRID",       (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
+    ]))
+    story.append(ts_table)
+    story.append(Spacer(1, 8))
+
+    # Intro box
+    intro_data = [[Paragraph(
+        "How to use this report: This document maps CloudGuardian's scan findings to specific "
+        "questions in the IASME Cyber Essentials v3.3 self-assessment questionnaire. For each "
+        "question, CloudGuardian provides a suggested answer based on live scan evidence. "
+        "Questions marked <b>✓ READY TO SUBMIT</b> can be answered directly from scan evidence. "
+        "Questions marked <b>✗ NEEDS ATTENTION</b> require remediation before you can answer "
+        "Yes. Questions marked <b>MANUAL</b> require your own input — CloudGuardian's cloud "
+        "scanning does not cover these areas.",
+        ParagraphStyle('intro', parent=styles['Normal'], fontSize=9,
+                       textColor=colors.HexColor('#1A1A2E')))]]
+    intro_table = Table(intro_data, colWidths=[460])
+    intro_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor('#EEF3FB')),
+        ("PADDING",    (0, 0), (-1, -1), 12),
+        ("GRID",       (0, 0), (-1, -1), 0.5, colors.HexColor('#2E75B6')),
+    ]))
+    story.append(intro_table)
+    story.append(Spacer(1, 8))
+
+    # Overall readiness summary
+    story.append(Paragraph("Overall Certification Readiness", section_style))
+    score               = score_data.get("score", 0)
+    risk                = score_data.get("risk_level", "UNKNOWN")
+    cert_status         = score_data.get("certification_status", "UNKNOWN")
+    auto_fail_triggered = score_data.get("auto_fail_triggered", False)
+
+    ready_color = (colors.HexColor('#A32D2D') if auto_fail_triggered or risk == "HIGH"
+                   else colors.HexColor('#BA7517') if risk == "MEDIUM"
+                   else colors.HexColor('#1A7A4A'))
+
+    readiness_data = [
+        ["Compliance Score",      f"{score}%"],
+        ["Risk Level",            risk],
+        ["Certification Status",  cert_status],
+        ["Auto-fail Triggered",   "YES — immediate action required" if auto_fail_triggered else "No"],
+        ["Scan Timestamp",        scan_timestamp],
+    ]
+    readiness_table = Table(readiness_data, colWidths=[180, 280])
+    readiness_table.setStyle(TableStyle([
+        ("FONTNAME",       (0, 0), (0, -1),  "Helvetica-Bold"),
+        ("FONTSIZE",       (0, 0), (-1, -1), 10),
+        ("TEXTCOLOR",      (0, 0), (-1, -1), colors.HexColor('#1A1A2E')),
+        ("GRID",           (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
+        ("PADDING",        (0, 0), (-1, -1), 8),
+        ("ROWBACKGROUNDS", (0, 0), (-1, -1),
+         [colors.HexColor('#EEF3FB'), colors.white]),
+    ]))
+    story.append(readiness_table)
+    story.append(Spacer(1, 16))
+    story.append(HRFlowable(width="100%", thickness=2,
+                             color=colors.HexColor('#2E75B6'), spaceAfter=8))
+
+    # ── PER-CONTROL QUESTION MAPPING ─────────────────────────────────────────
+    story.append(Paragraph(
+        "CE Question Answers — Cloud Controls (Auto-populated from Scan)", section_style))
+    story.append(Paragraph(
+        "The following questions can be answered using CloudGuardian scan evidence. "
+        "Copy the suggested answer into the IASME online assessment platform.",
+        body_style
+    ))
+
+    for control_id, data in results.items():
+        name      = data.get("name", control_id)
+        status    = data.get("status", "UNKNOWN")
+        affected  = data.get("affected_resources", [])
+
+        # Resolve which CE question mapping applies
+        control_key = _resolve_control_key(name)
+        if not control_key:
+            continue
+
+        mapping = CE_QUESTION_MAPPINGS[control_key]
+
+        # Control section header
+        hdr_bg = (colors.HexColor('#A32D2D') if status == "FAIL"
+                  else colors.HexColor('#1A7A4A') if status == "PASS"
+                  else colors.HexColor('#7F6000'))
+
+        hdr_data = [[
+            Paragraph(f"<b>{mapping['control_label']}</b>",
+                      ParagraphStyle('ph', parent=styles['Normal'],
+                                     fontSize=11, textColor=colors.white,
+                                     fontName='Helvetica-Bold')),
+            Paragraph(f"<b>Scan result: {status}</b>",
+                      ParagraphStyle('ps', parent=styles['Normal'],
+                                     fontSize=10, textColor=colors.white,
+                                     fontName='Helvetica-Bold', alignment=2)),
+        ]]
+        hdr_table = Table(hdr_data, colWidths=[340, 120])
+        hdr_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), hdr_bg),
+            ("PADDING",    (0, 0), (-1, -1), 8),
+        ]))
+        story.append(Spacer(1, 12))
+        story.append(hdr_table)
+
+        # Per-question rows
+        for q_num, q_text in mapping["questions"]:
+            answer, ans_bg, badge, badge_color = _build_prep_answer(
+                data, control_key, scan_timestamp, affected
+            )
+
+            q_rows = [
+                # Question number and text
+                [
+                    Paragraph(f"<b>{q_num}</b>",
+                              ParagraphStyle('qn', parent=styles['Normal'],
+                                             fontSize=10, textColor=colors.HexColor('#1F3D6B'),
+                                             fontName='Helvetica-Bold')),
+                    Paragraph(q_text,
+                              ParagraphStyle('qt', parent=styles['Normal'],
+                                             fontSize=10, textColor=colors.HexColor('#1A1A2E'),
+                                             fontName='Helvetica-Bold')),
+                ],
+                # Badge
+                [
+                    Paragraph("Status:",
+                              ParagraphStyle('bl', parent=styles['Normal'],
+                                             fontSize=9, textColor=colors.HexColor('#555566'),
+                                             fontName='Helvetica-Bold')),
+                    Paragraph(f"<b>{badge}</b>",
+                              ParagraphStyle('bv', parent=styles['Normal'],
+                                             fontSize=9, textColor=badge_color,
+                                             fontName='Helvetica-Bold')),
+                ],
+                # Suggested answer
+                [
+                    Paragraph("Suggested answer:",
+                              ParagraphStyle('al', parent=styles['Normal'],
+                                             fontSize=9, textColor=colors.HexColor('#555566'),
+                                             fontName='Helvetica-Bold')),
+                    Paragraph(answer,
+                              ParagraphStyle('av', parent=styles['Normal'],
+                                             fontSize=9, textColor=colors.HexColor('#1A1A2E'))),
+                ],
+            ]
+
+            q_table = Table(q_rows, colWidths=[120, 340])
+            q_table.setStyle(TableStyle([
+                ("BACKGROUND",     (0, 0), (-1, -1), ans_bg),
+                ("BACKGROUND",     (0, 0), (0, -1),
+                 colors.HexColor('#E0EAF5')),
+                ("VALIGN",         (0, 0), (-1, -1), "TOP"),
+                ("PADDING",        (0, 0), (-1, -1), 8),
+                ("GRID",           (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
+                ("LINEBELOW",      (0, -1), (-1, -1), 1, colors.HexColor('#AAAAAA')),
+            ]))
+            story.append(q_table)
+
+    # ── MANUAL QUESTIONS ─────────────────────────────────────────────────────
+    story.append(Spacer(1, 16))
+    story.append(HRFlowable(width="100%", thickness=1,
+                             color=colors.HexColor('#CCCCCC'), spaceAfter=8))
+    story.append(Paragraph(
+        "CE Questions Requiring Manual Completion", section_style))
+    story.append(Paragraph(
+        "The following questions are outside CloudGuardian's cloud scanning scope. "
+        "They relate to your organisation's policies, processes, and endpoint devices. "
+        "You will need to answer these manually in the IASME assessment platform.",
+        body_style
+    ))
+
+    manual_questions = [
+        ("A1.1–A1.16", "Your Company",
+         "Organisation name, type, size, registration number, address, business type, "
+         "website, renewal status, reasons for applying, IASME consent questions."),
+        ("A2.1–A2.5",  "Scope of Assessment — Organisation",
+         "Which networks are in scope, site locations, remote worker count and connection "
+         "methods, network equipment list (firewalls, routers with make/model)."),
+        ("A2.6–A2.8",  "Scope of Assessment — Devices",
+         "Inventory of laptops, desktops, servers, tablets and mobile devices with "
+         "operating system versions. CloudGuardian scans cloud services only."),
+        ("A4.2–A4.6",  "Firewall — Password & Process",
+         "Whether default firewall passwords have been changed, password configuration "
+         "method, firewall review process. These relate to physical/virtual firewall "
+         "devices, not cloud security groups."),
+        ("A5.1",       "Secure Configuration — Unnecessary Software",
+         "Whether unnecessary software has been removed from laptops, desktops, servers "
+         "and mobile devices. This is an endpoint check."),
+        ("A5.6–A5.10", "Secure Configuration — Passwords & Device Locking",
+         "Password compromise process, brute force protection, auto-run disabled, "
+         "device locking mechanisms. These are endpoint and policy controls."),
+        ("A6.2–A6.3",  "Patching — Software Inventory",
+         "List of browser versions, malware protection software versions, email "
+         "applications and office applications. CloudGuardian checks OS patch mode "
+         "only — application-level inventory requires manual input."),
+        ("A7.1–A7.9",  "User Access — Processes & Policies",
+         "Account approval process, leaver account removal process, least privilege "
+         "review, admin account tracking and review. These are organisational process "
+         "questions, not technical checks."),
+        ("A7.10–A7.13","User Access — Password Policies",
+         "Brute force protection method, password quality controls, user education on "
+         "strong passwords, compromise response process."),
+        ("A8.3–A8.5",  "Malware — Web Scanning & App Signing",
+         "Whether anti-malware scans web pages, whether app signing/allow-listing is "
+         "configured, approved application list maintenance."),
+        ("A3.1–A3.3",  "Insurance",
+         "Cyber insurance eligibility and opt-in questions. These are administrative "
+         "questions unrelated to technical controls."),
+    ]
+
+    for q_ref, q_section, q_desc in manual_questions:
+        row = [[
+            Paragraph(f"<b>{q_ref}</b>\n{q_section}",
+                      ParagraphStyle('mql', parent=styles['Normal'],
+                                     fontSize=9, textColor=colors.HexColor('#1F3D6B'),
+                                     fontName='Helvetica-Bold')),
+            Paragraph(q_desc,
+                      ParagraphStyle('mqd', parent=styles['Normal'],
+                                     fontSize=9, textColor=colors.HexColor('#555566'))),
+            Paragraph("MANUAL",
+                      ParagraphStyle('mqm', parent=styles['Normal'],
+                                     fontSize=9, textColor=colors.HexColor('#888888'),
+                                     fontName='Helvetica-Bold', alignment=1)),
+        ]]
+        row_table = Table(row, colWidths=[110, 290, 60])
+        row_table.setStyle(TableStyle([
+            ("BACKGROUND",  (0, 0), (-1, -1), colors.HexColor('#F5F5F5')),
+            ("BACKGROUND",  (0, 0), (0, -1),  colors.HexColor('#EBEBEB')),
+            ("BACKGROUND",  (2, 0), (2, -1),  colors.HexColor('#EBEBEB')),
+            ("VALIGN",      (0, 0), (-1, -1), "TOP"),
+            ("PADDING",     (0, 0), (-1, -1), 8),
+            ("GRID",        (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
+            ("LINEBELOW",   (0, -1), (-1, -1), 0.5, colors.HexColor('#DDDDDD')),
+        ]))
+        story.append(row_table)
+
+    # Footer
+    story.append(Spacer(1, 16))
+    story.append(HRFlowable(width="100%", thickness=1,
+                             color=colors.HexColor('#CCCCCC'), spaceAfter=8))
+    story.append(Paragraph(
+        f"<b>About this report:</b> Generated by CloudGuardian (OputGuard Technologies Ltd). "
+        f"This CE Preparation Report maps scan findings from your {provider} environment to "
+        f"specific IASME Cyber Essentials v3.3 (Danzell) questionnaire questions. Suggested "
+        f"answers are based on live read-only API scan data collected at {scan_timestamp}. "
+        f"This document does not constitute a CE assessment. Certification must be completed "
+        f"via the IASME online assessment platform at iasme.co.uk. CloudGuardian covers cloud "
+        f"infrastructure controls only — endpoint and organisational process questions require "
+        f"manual completion.",
         footer_style
     ))
 

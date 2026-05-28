@@ -116,6 +116,14 @@
             background: #2E75B6;
         }
 
+        .btn-green {
+            background: #375623;
+        }
+
+        .btn-green:hover {
+            background: #2a4019;
+        }
+
         .divider {
             text-align: center;
             color: #8b949e;
@@ -132,6 +140,13 @@
 
         .score {
             font-size: 2.8rem;
+            font-weight: bold;
+            color: #58a6ff;
+            margin: 0.5rem 0;
+        }
+
+        .score-mini {
+            font-size: 2rem;
             font-weight: bold;
             color: #58a6ff;
             margin: 0.5rem 0;
@@ -327,6 +342,13 @@
             color: #3fb950;
         }
 
+        .btn-hint {
+            color: #8b949e;
+            font-size: 0.82rem;
+            margin-top: 0.5rem;
+            display: block;
+        }
+
         /* ── Provider tabs ── */
         .provider-tabs {
             display: flex;
@@ -366,14 +388,6 @@
             font-size: 0.95rem;
         }
 
-        /* ── Score mini cards ── */
-        .score-mini {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #58a6ff;
-            margin: 0.5rem 0;
-        }
-
         @media (max-width: 600px) {
             .grid {
                 grid-template-columns: 1fr;
@@ -411,18 +425,23 @@
     ══════════════════════════════════════════════════ -->
         <div id="aws-panel">
 
+            <!-- AWS Connection -->
             <div class="card">
                 <h2>AWS Connection</h2>
-                <p style="color:#8b949e;font-size:0.9rem;">Connect your AWS account to run a compliance scan.</p>
+                <p style="color:#8b949e;font-size:0.9rem;">Connect your AWS account to run a compliance scan. Choose one
+                    method below.</p>
                 <form method="POST">
                     <input type="hidden" name="action" value="set_connection">
                     <h3>Option 1 — AWS CLI Profile</h3>
-                    <p style="color:#8b949e;font-size:0.85rem;">Use a locally configured AWS profile.</p>
+                    <p style="color:#8b949e;font-size:0.85rem;">Use a locally configured AWS profile (e.g. from
+                        <code>aws configure --profile ...</code>)</p>
                     <label>Profile name</label>
                     <input type="text" name="profile_name" placeholder="e.g. oputprojectuser"
                         value="{{ current_profile }}">
                     <div class="divider">— or —</div>
                     <h3>Option 2 — Temporary Access Keys</h3>
+                    <p style="color:#8b949e;font-size:0.85rem;">For live demos or external accounts. Keys are not stored
+                        permanently.</p>
                     <label>AWS Access Key ID</label>
                     <input type="text" name="access_key" placeholder="AKIA..." value="{{ current_access_key }}">
                     <br><br>
@@ -436,6 +455,7 @@
                 </form>
             </div>
 
+            <!-- Run AWS Scan -->
             <div class="card">
                 <form method="POST">
                     <input type="hidden" name="action" value="scan">
@@ -443,6 +463,7 @@
                 </form>
             </div>
 
+            <!-- Score + Risk -->
             <div class="grid">
                 <div class="card">
                     <h2>Compliance Score</h2>
@@ -467,6 +488,7 @@
                 </div>
             </div>
 
+            <!-- AWS Control Results -->
             <div class="card">
                 <h2>Control Results</h2>
                 {% if results %}
@@ -512,9 +534,10 @@
                                         {% elif signal == "S3_PUBLIC" %}<li>A storage bucket is publicly accessible.
                                             Anyone on the internet could potentially read its contents.</li>
                                         {% elif signal == "SG_SSH_OPEN" %}<li>A system access port (SSH) is open to the
-                                            entire internet.</li>
+                                            entire internet. Attackers can attempt entry from anywhere in the world.
+                                        </li>
                                         {% elif signal == "SG_RDP_OPEN" %}<li>A remote desktop port is open to the
-                                            entire internet.</li>
+                                            entire internet, increasing the risk of unauthorised access.</li>
                                         {% elif signal == "IGW_ATTACHED" %}<li>An internet gateway is attached, making
                                             systems potentially reachable from outside your network.</li>
                                         {% elif signal == "PUBLIC_ROUTE_EXISTS" %}<li>A public network route exists that
@@ -531,7 +554,8 @@
                                     {% endif %}
                                 </div>
                                 {% else %}
-                                <div class="pass-detail">&#x2713; This control is passing — no issues detected.</div>
+                                <div class="pass-detail">&#x2713; This control is passing — no issues detected in this
+                                    area.</div>
                                 {% endif %}
                             </td>
                             <td class="{{ data.status|lower }}" style="white-space:nowrap;">{{ data.status }}</td>
@@ -545,6 +569,7 @@
                 {% endif %}
             </div>
 
+            <!-- Drift Detection -->
             <div class="card">
                 <h2>Changes Since Last Scan</h2>
                 {% if drift %}
@@ -557,11 +582,14 @@
                 </div>
                 {% endfor %}
                 {% else %}
-                <p style="color:#8b949e;">{% if results %}No changes detected since the last scan.{% else %}Changes will
-                    appear here after your second scan.{% endif %}</p>
+                <p style="color:#8b949e;">
+                    {% if results %}No changes detected since the last scan. Your compliance posture is stable.
+                    {% else %}Changes will appear here after your second scan.{% endif %}
+                </p>
                 {% endif %}
             </div>
 
+            <!-- Ask CloudGuardian -->
             <div class="card">
                 <h2>Ask CloudGuardian</h2>
                 <p style="color:#8b949e;font-size:0.85rem;">Ask a question about your AWS compliance results in plain
@@ -580,12 +608,18 @@
                 {% endif %}
             </div>
 
+            <!-- AWS Evidence Pack -->
             <div class="card">
                 <h2>Evidence Pack</h2>
                 {% if results %}
                 <p style="color:#8b949e;font-size:0.85rem;">Your assessor-ready Cyber Essentials evidence pack is ready
                     to download.</p>
                 <a href="{{ url_for('download_pdf') }}" class="btn">&#x1F4E5; Download AWS PDF Evidence Pack</a>
+                <br><br>
+                <a href="{{ url_for('download_pdf_ce_prep') }}" class="btn btn-green">&#x1F4CB; Download CE
+                    Questionnaire Prep Report (AWS)</a>
+                <span class="btn-hint">Maps scan findings to specific IASME CE v3.3 question numbers — copy-paste ready
+                    answers for the IASME assessment platform.</span>
                 {% else %}
                 <p style="color:#8b949e;">Run a compliance scan to generate your evidence pack.</p>
                 {% endif %}
@@ -599,6 +633,7 @@
     ══════════════════════════════════════════════════ -->
         <div id="azure-panel" style="display:none;">
 
+            <!-- Azure Connection -->
             <div class="card">
                 <h2>Azure Connection</h2>
                 <p style="color:#8b949e;font-size:0.9rem;">Enter your Service Principal credentials to scan your Azure
@@ -616,6 +651,7 @@
                 <input type="text" id="az-subscription-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
             </div>
 
+            <!-- Run Azure Scan -->
             <div class="card">
                 <button class="btn btn-scan" onclick="runAzureScan()">&#x1F50D; Run Azure Compliance Scan</button>
                 <div class="azure-scanning" id="azure-scanning">&#x23F3; Scanning your Azure environment — this may take
@@ -623,7 +659,7 @@
                 <div id="azure-error" style="display:none;margin-top:1rem;" class="error-card"></div>
             </div>
 
-            <!-- Azure Score + Risk (shown after scan) -->
+            <!-- Azure Score + Risk -->
             <div id="azure-score-section" style="display:none;">
                 <div class="grid">
                     <div class="card">
@@ -679,6 +715,11 @@
                     <p style="color:#8b949e;font-size:0.85rem;">Your assessor-ready Azure Cyber Essentials evidence pack
                         is ready to download.</p>
                     <a href="/download-pdf/azure" class="btn">&#x1F4E5; Download Azure PDF Evidence Pack</a>
+                    <br><br>
+                    <a href="/download-pdf/ce-prep/azure" class="btn btn-green">&#x1F4CB; Download CE Questionnaire Prep
+                        Report (Azure)</a>
+                    <span class="btn-hint">Maps scan findings to specific IASME CE v3.3 question numbers — copy-paste
+                        ready answers for the IASME assessment platform.</span>
                 </div>
             </div>
 
