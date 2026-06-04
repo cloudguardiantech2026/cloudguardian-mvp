@@ -1,8 +1,9 @@
 import json
 import os
 import markdown
-from flask import Flask, render_template, request, send_file, session, jsonify, Response
+from flask import Flask, render_template, request, send_file, session, jsonify, Response, redirect
 
+from urllib.parse import urlencode, quote
 from backend.db.customer_db import generate_external_id, create_customer
 from backend.scanners.aws_s3       import get_s3_signals
 from backend.scanners.aws_iam      import get_iam_signals
@@ -380,52 +381,115 @@ def index():
         current_region=session.get("region_name", "eu-west-2"),
     )
 
-# ── Add this import at the top of app.py alongside existing imports ───────────
-# from backend.db.customer_db import generate_external_id, create_customer
-# from flask import Response   (add Response to existing flask import line)
 
-# ── Add this route to app.py ──────────────────────────────────────────────────
+# ── Replace the existing /connect/aws route and add /connect/azure ────────────
+# Also add these imports at the top of app.py:
+#   from urllib.parse import urlencode
+
+# Raw GitHub URLs for the hosted templates
+CF_TEMPLATE_URL  = "https://raw.githubusercontent.com/cloudguardiantech2026/cloudguardian-mvp/main/cloudguardian_aws.yaml"
+ARM_TEMPLATE_URL = "https://raw.githubusercontent.com/cloudguardiantech2026/cloudguardian-mvp/main/cloudguardian_azure.json"
+
+# AWS CloudFormation Quick-Create base URL
+CF_QUICK_CREATE_BASE = "https://console.aws.amazon.com/cloudformation/home#/stacks/create/review"
+
+# Azure Deploy Button base URL
+AZURE_DEPLOY_BASE = "https://portal.azure.com/#create/Microsoft.Template/uri"
+
 
 @app.route("/connect/aws")
 def connect_aws():
     """
-    Generates a unique External ID for this onboarding session, stores it in
-    the SQLite database, pre-fills the Terraform template, and serves it as a
-    downloadable .tf file.
+    Generates a unique External ID, stores it in SQLite and session,
+    then redirects the customer to the AWS CloudFormation Quick-Create URL
+    with the template and External ID pre-filled.
 
-    The customer:
-      1. Downloads this file
-      2. Runs terraform init && terraform apply
-      3. Copies the aws_role_arn output back into the CloudGuardian dashboard
-      4. Enters their External ID (shown on screen before download)
-
-    The External ID is stored in session so the dashboard can pre-fill it.
+    The customer lands in their AWS console, reviews the stack, clicks Create,
+    and the CloudGuardian-ReadOnly-AuditRole is created in their account.
+    No terminal or Terraform required.
     """
     from backend.db.customer_db import generate_external_id, create_customer
+    from urllib.parse import urlencode, quote
 
-    # Generate and persist the External ID
     external_id = generate_external_id()
     create_customer(external_id)
-
-    # Store in session so the connection form can pre-fill it
     session["external_id"] = external_id
 
-    # Load the Terraform template and substitute the placeholder
-    tf_template_path = os.path.join(
-        os.path.dirname(__file__), "cloudguardian_connect.tf"
-    )
-    with open(tf_template_path, "r") as f:
-        tf_content = f.read()
+    # Build the CloudFormation Quick-Create URL
+    # AWS will pre-fill the stack name and parameter from these query params
+    params = {
+        "templateURL":                    CF_TEMPLATE_URL,
+        "stackName":                      "CloudGuardian-Audit-Stack",
+        "param_CloudGuardianExternalId":  external_id,
+    }
 
-    tf_content = tf_content.replace("{{EXTERNAL_ID}}", external_id)
+    cf_url = f"{CF_QUICK_CREATE_BASE}?{urlencode(params)}"
+    return redirect(cf_url)
 
-    return Response(
-        tf_content,
-        mimetype="text/plain",
-        headers={
-            "Content-Disposition": "attachment; filename=cloudguardian_connect.tf"
-        },
-    )
+
+@app.route("/connect/aws/id")
+def connect_aws_id():
+    """
+    Returns the External ID currently stored in session as JSON.
+    Called by the frontend to populate the External ID field after
+    the customer returns from the AWS console.
+    """
+    external_id = session.get("external_id", "")
+    return jsonify({"external_id": external_id})
+
+
+@app.route("/connect/azure")
+def connect_azure():
+    """
+    Redirects the customer to the Azure portal Deploy button URL with the
+    CloudGuardian ARM template pre-loaded.
+
+    The customer lands in their Azure portal, reviews the deployment,
+    clicks Deploy, and the App Registration + Reader role assignment
+    are created in their tenant.
+    No terminal or Terraform required.
+    """
+    from urllib.parse import quote
+
+    # Azure Deploy Button encodes the template URL as a path segment
+    azure_url = f"{AZURE_DEPLOY_BASE}/{quote(ARM_TEMPLATE_URL, safe='')}"
+    return redirect(azure_url)
+
+
+@app.route("/verify/aws", methods=["POST"])
+def verify_aws():
+    """
+    Performs a lightweight STS AssumeRole test using the supplied Role ARN
+    and External ID. Returns JSON indicating success or failure.
+
+    Gives the customer immediate confirmation that CloudGuardian can access
+    their account before they proceed to a full scan.
+    """
+    from backend.scanners.aws_auth import build_session
+    from botocore.exceptions import ClientError
+
+    data        = request.get_json(silent=True) or {}
+    role_arn    = data.get("role_arn",    "").strip()
+    external_id = data.get("external_id", "").strip()
+
+    if not role_arn or not external_id:
+        return jsonify({
+            "success": False,
+            "error":   "Role ARN and External ID are required.",
+        }), 400
+
+    try:
+        session_obj = build_session(role_arn, external_id)
+        iam = session_obj.client("iam")
+        iam.get_account_summary()
+        return jsonify({"success": True})
+
+    except RuntimeError as e:
+        return jsonify({"success": False, "error": str(e)})
+    except ClientError as e:
+        return jsonify({"success": False, "error": e.response["Error"]["Message"]})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 
 
 if __name__ == "__main__":

@@ -429,74 +429,71 @@
             <div class="card">
                 <h2>AWS Connection</h2>
                 <p style="color:#8b949e;font-size:0.9rem;">
-                    Connect your AWS account securely in three steps. No access keys required —
+                    Connect your AWS account in two steps. No terminal or access keys required —
                     CloudGuardian uses a temporary, read-only session via AWS STS.
                 </p>
 
-                <!-- Step 1 — Download -->
-                <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.25rem;">
+                <!-- Step 1 — Launch stack -->
+                <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;">
                     <div
                         style="background:#1F3D6B;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.85rem;flex-shrink:0;">
                         1</div>
                     <div>
-                        <p style="color:#e6edf3;font-size:0.9rem;margin:0 0 0.5rem;">
-                            Download your pre-configured Terraform file. It contains your unique
-                            External ID and the CloudGuardian account ID — no editing required.
+                        <p style="color:#e6edf3;font-size:0.9rem;margin:0 0 0.75rem;">
+                            Click below to open your AWS console with the CloudGuardian stack
+                            pre-configured. Review it, then click <strong>Create stack</strong>.
+                            Takes under two minutes.
                         </p>
                         <a href="/connect/aws" class="btn" style="text-decoration:none;">
-                            &#x2B07; Download cloudguardian_connect.tf
+                            &#x1F680; Launch CloudGuardian in AWS Console
                         </a>
-                        {% if session.get('external_id') %}
-                        <p style="color:#8b949e;font-size:0.82rem;margin-top:0.5rem;">
-                            Your External ID: <code style="color:#e3b341;">{{ session.get('external_id') }}</code>
+                        <p style="color:#8b949e;font-size:0.8rem;margin-top:0.6rem;">
+                            Creates a read-only IAM role in your account. No keys generated.
+                            Your External ID will be pre-filled automatically.
                         </p>
-                        {% endif %}
                     </div>
                 </div>
 
-                <!-- Step 2 — Deploy -->
-                <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.25rem;">
-                    <div
-                        style="background:#1F3D6B;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.85rem;flex-shrink:0;">
-                        2</div>
-                    <div>
-                        <p style="color:#e6edf3;font-size:0.9rem;margin:0;">
-                            In your terminal, run:
-                        </p>
-                        <pre
-                            style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:10px 14px;font-size:0.85rem;color:#3fb950;margin:0.5rem 0 0;">terraform init &amp;&amp; terraform apply</pre>
-                    </div>
-                </div>
-
-                <!-- Step 3 — Paste outputs -->
+                <!-- Step 2 — Paste ARN + verify -->
                 <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;">
                     <div
                         style="background:#1F3D6B;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.85rem;flex-shrink:0;">
-                        3</div>
-                    <p style="color:#e6edf3;font-size:0.9rem;margin:0;">
-                        Copy the <code style="color:#e3b341;">aws_role_arn</code> output from Terraform
-                        and paste it below along with your External ID.
-                    </p>
-                </div>
+                        2</div>
+                    <div style="width:100%;">
+                        <p style="color:#e6edf3;font-size:0.9rem;margin:0 0 0.75rem;">
+                            Once the stack is created, copy the <code style="color:#e3b341;">RoleArn</code>
+                            from the stack Outputs tab and paste it below.
+                        </p>
 
-                <form method="POST">
-                    <input type="hidden" name="action" value="set_connection">
-                    <label>IAM Role ARN</label>
-                    <input type="text" name="role_arn"
-                        placeholder="arn:aws:iam::123456789012:role/CloudGuardian-ReadOnly-AuditRole"
-                        value="{{ current_role_arn }}">
-                    <br><br>
-                    <label>External ID</label>
-                    <p style="color:#8b949e;font-size:0.83rem;margin:4px 0 6px;">
-                        Your unique CloudGuardian customer ID — provided when you downloaded the Terraform file.
-                    </p>
-                    <input type="text" name="external_id" placeholder="e.g. cg-a1b2c3d4-e5f6-7890-abcd-ef1234567890">
-                    <br><br>
-                    <label>AWS Region</label>
-                    <input type="text" name="region_name" placeholder="eu-west-2" value="{{ current_region }}">
-                    <br><br>
-                    <button type="submit" class="btn">&#x1F517; Save Connection</button>
-                </form>
+                        <form method="POST" id="aws-connection-form">
+                            <input type="hidden" name="action" value="set_connection">
+                            <label>IAM Role ARN</label>
+                            <input type="text" id="input-role-arn" name="role_arn"
+                                placeholder="arn:aws:iam::123456789012:role/CloudGuardian-ReadOnly-AuditRole"
+                                value="{{ current_role_arn }}">
+                            <br><br>
+                            <label>External ID</label>
+                            <p style="color:#8b949e;font-size:0.83rem;margin:4px 0 6px;">
+                                Auto-generated by CloudGuardian. Find it in the stack Parameters tab if needed.
+                            </p>
+                            <input type="text" id="input-external-id" name="external_id"
+                                placeholder="cg-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                value="{% if session.get('external_id') %}{{ session.get('external_id') }}{% endif %}">
+                            <br><br>
+                            <label>AWS Region</label>
+                            <input type="text" name="region_name" placeholder="eu-west-2" value="{{ current_region }}">
+                            <br><br>
+                            <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+                                <button type="submit" class="btn">&#x1F517; Save Connection</button>
+                                <button type="button" class="btn" id="btn-verify-aws" style="background:#375623;"
+                                    onclick="verifyAwsConnection()">&#x2705; Verify Connection</button>
+                            </div>
+                            <div id="verify-aws-result"
+                                style="display:none;margin-top:0.85rem;border-radius:6px;padding:10px 14px;font-size:0.9rem;">
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
 
             <!-- Run AWS Scan -->
@@ -680,19 +677,60 @@
             <!-- Azure Connection -->
             <div class="card">
                 <h2>Azure Connection</h2>
-                <p style="color:#8b949e;font-size:0.9rem;">Enter your Service Principal credentials to scan your Azure
-                    subscription.</p>
-                <label>Tenant ID</label>
-                <input type="text" id="az-tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
-                <br><br>
-                <label>Client ID</label>
-                <input type="text" id="az-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
-                <br><br>
-                <label>Client Secret</label>
-                <input type="password" id="az-client-secret" placeholder="Enter client secret">
-                <br><br>
-                <label>Subscription ID</label>
-                <input type="text" id="az-subscription-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                <p style="color:#8b949e;font-size:0.9rem;">
+                    Connect your Azure subscription in two steps. No terminal or client secrets required —
+                    CloudGuardian creates a read-only App Registration in your Entra ID tenant.
+                </p>
+
+                <!-- Step 1 — Deploy to Azure -->
+                <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;">
+                    <div
+                        style="background:#1F3D6B;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.85rem;flex-shrink:0;">
+                        1</div>
+                    <div>
+                        <p style="color:#e6edf3;font-size:0.9rem;margin:0 0 0.75rem;">
+                            Click below to open your Azure portal with the CloudGuardian deployment
+                            pre-configured. Review it, then click <strong>Deploy</strong>.
+                            Takes under two minutes.
+                        </p>
+                        <a href="/connect/azure" class="btn" style="text-decoration:none;background:#0078d4;">
+                            &#x1F537; Deploy CloudGuardian in Azure Portal
+                        </a>
+                        <p style="color:#8b949e;font-size:0.8rem;margin-top:0.6rem;">
+                            Creates a read-only App Registration and assigns the Reader role
+                            to your subscription. No client secret stored by CloudGuardian.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Step 2 — Paste outputs -->
+                <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;">
+                    <div
+                        style="background:#1F3D6B;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.85rem;flex-shrink:0;">
+                        2</div>
+                    <div style="width:100%;">
+                        <p style="color:#e6edf3;font-size:0.9rem;margin:0 0 0.75rem;">
+                            Once deployed, copy the <code style="color:#e3b341;">clientId</code> and
+                            <code style="color:#e3b341;">tenantId</code> from the deployment Outputs
+                            and paste them below.
+                        </p>
+                        <label>Tenant ID</label>
+                        <input type="text" id="az-tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                        <br><br>
+                        <label>Client ID</label>
+                        <input type="text" id="az-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                        <br><br>
+                        <label>Client Secret</label>
+                        <p style="color:#8b949e;font-size:0.83rem;margin:4px 0 6px;">
+                            Temporarily required for this release. Will be removed when Workload
+                            Identity Federation is enabled in the next release.
+                        </p>
+                        <input type="password" id="az-client-secret" placeholder="Enter client secret">
+                        <br><br>
+                        <label>Subscription ID</label>
+                        <input type="text" id="az-subscription-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                    </div>
+                </div>
             </div>
 
             <!-- Run Azure Scan -->
@@ -773,6 +811,77 @@
 
     <script>
         // ── Provider switching ─────────────────────────────────────────────────────
+        // ── Terraform download: reveal External ID block after click ─────────────
+        function handleTfDownload() {
+            // Small delay so the file download initiates before we update the DOM.
+            // The External ID is fetched from the server via the /connect/aws route
+            // which stores it in session — we reload the relevant block via fetch.
+            setTimeout(function () {
+                fetch('/connect/aws/id')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.external_id) {
+                            document.getElementById('external-id-value').textContent = data.external_id;
+                            document.getElementById('external-id-block').style.display = 'block';
+                            document.getElementById('input-external-id').value = data.external_id;
+                        }
+                    })
+                    .catch(() => { });
+            }, 800);
+        }
+
+        // ── Verify AWS connection via STS AssumeRole test ─────────────────────────
+        async function verifyAwsConnection() {
+            const roleArn = document.getElementById('input-role-arn').value.trim();
+            const externalId = document.getElementById('input-external-id').value.trim();
+            const btn = document.getElementById('btn-verify-aws');
+            const resultDiv = document.getElementById('verify-aws-result');
+
+            if (!roleArn || !externalId) {
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = '#2d1515';
+                resultDiv.style.border = '1px solid #f85149';
+                resultDiv.style.color = '#f85149';
+                resultDiv.textContent = '⚠ Please enter both the IAM Role ARN and External ID before verifying.';
+                return;
+            }
+
+            btn.textContent = '⏳ Verifying...';
+            btn.disabled = true;
+            resultDiv.style.display = 'none';
+
+            try {
+                const resp = await fetch('/verify/aws', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role_arn: roleArn, external_id: externalId }),
+                });
+                const data = await resp.json();
+
+                resultDiv.style.display = 'block';
+                if (data.success) {
+                    resultDiv.style.background = '#0d2818';
+                    resultDiv.style.border = '1px solid #3fb950';
+                    resultDiv.style.color = '#3fb950';
+                    resultDiv.textContent = '✅ Connection verified — CloudGuardian can access your AWS account. Click Save Connection to proceed.';
+                } else {
+                    resultDiv.style.background = '#2d1515';
+                    resultDiv.style.border = '1px solid #f85149';
+                    resultDiv.style.color = '#f85149';
+                    resultDiv.textContent = '✗ Verification failed: ' + (data.error || 'Unknown error. Check your Role ARN and External ID.');
+                }
+            } catch (e) {
+                resultDiv.style.display = 'block';
+                resultDiv.style.background = '#2d1515';
+                resultDiv.style.border = '1px solid #f85149';
+                resultDiv.style.color = '#f85149';
+                resultDiv.textContent = '✗ Request failed. Please try again.';
+            } finally {
+                btn.textContent = '✅ Verify Connection';
+                btn.disabled = false;
+            }
+        }
+
         function switchProvider(provider) {
             document.getElementById('aws-panel').style.display = provider === 'aws' ? 'block' : 'none';
             document.getElementById('azure-panel').style.display = provider === 'azure' ? 'block' : 'none';

@@ -1,0 +1,75 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "metadata": {
+        "description": "Creates a read-only App Registration and Service Principal in your Azure Entra ID tenant, and assigns the built-in Reader role at subscription scope. CloudGuardian uses this to perform Cyber Essentials compliance scans. No client secrets are stored by CloudGuardian."
+    },
+    "parameters": {
+        "appDisplayName": {
+            "type": "string",
+            "defaultValue": "CloudGuardian-ReadOnly-Audit",
+            "metadata": {
+                "description": "Display name for the App Registration in your Entra ID"
+            }
+        }
+    },
+    "variables": {
+        "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
+        "roleAssignmentName": "[guid(subscription().subscriptionId, 'CloudGuardianReader')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/deploymentScripts",
+            "apiVersion": "2020-10-01",
+            "name": "CloudGuardianAppRegistration",
+            "location": "[deployment().location]",
+            "kind": "AzurePowerShell",
+            "properties": {
+                "azPowerShellVersion": "9.0",
+                "timeout": "PT10M",
+                "retentionInterval": "PT1H",
+                "scriptContent": "
+          $app = New-AzADApplication -DisplayName 'CloudGuardian-ReadOnly-Audit'
+          $sp  = New-AzADServicePrincipal -ApplicationId $app.AppId
+          Start-Sleep -Seconds 15
+          $DeploymentScriptOutputs = @{}
+          $DeploymentScriptOutputs['clientId'
+                ]  = $app.AppId
+          $DeploymentScriptOutputs['objectId'
+                ]  = $sp.Id
+          $DeploymentScriptOutputs['tenantId'
+                ]  = (Get-AzContext).Tenant.Id
+        "
+            }
+        },
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2022-04-01",
+            "name": "[variables('roleAssignmentName')]",
+            "dependsOn": [
+                "CloudGuardianAppRegistration"
+            ],
+            "properties": {
+                "roleDefinitionId": "[variables('roleDefinitionId')]",
+                "principalId": "[reference('CloudGuardianAppRegistration').outputs.objectId]",
+                "principalType": "ServicePrincipal"
+            }
+        }
+    ],
+    "outputs": {
+        "clientId": {
+            "type": "string",
+            "value": "[reference('CloudGuardianAppRegistration').outputs.clientId]",
+            "metadata": {
+                "description": "Paste this Client ID into the CloudGuardian Azure Connection screen"
+            }
+        },
+        "tenantId": {
+            "type": "string",
+            "value": "[reference('CloudGuardianAppRegistration').outputs.tenantId]",
+            "metadata": {
+                "description": "Paste this Tenant ID into the CloudGuardian Azure Connection screen"
+            }
+        }
+    }
+}

@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Creates a secure, read-only IAM role that allows CloudGuardian to perform
+  Cyber Essentials compliance scans against your AWS account.
+  No access keys are created. CloudGuardian uses AWS STS to assume this role
+  and receives temporary, scoped credentials that expire after 1 hour.
+
+Parameters:
+
+  CloudGuardianExternalId:
+    Type: String
+    Description: >
+      Your unique CloudGuardian customer ID. This was pre-filled by CloudGuardian
+      and acts as a second authentication factor — only CloudGuardian can use it.
+    AllowedPattern: 'cg-[a-f0-9\-]{36}'
+    ConstraintDescription: Must be a valid CloudGuardian External ID (format: cg-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+
+Resources:
+
+  CloudGuardianAuditRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CloudGuardian-ReadOnly-AuditRole
+      Description: Read-only role for CloudGuardian Cyber Essentials compliance scanning
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: 'arn:aws:iam::968477811670:root'
+            Action: 'sts:AssumeRole'
+            Condition:
+              StringEquals:
+                'sts:ExternalId': !Ref CloudGuardianExternalId
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/SecurityAudit'
+        - 'arn:aws:iam::aws:policy/ReadOnlyAccess'
+      Tags:
+        - Key: CreatedBy
+          Value: CloudGuardian
+        - Key: Purpose
+          Value: CyberEssentialsComplianceScanning
+
+Outputs:
+
+  RoleArn:
+    Description: >
+      Copy this value and paste it into the CloudGuardian AWS Connection screen
+    Value: !GetAtt CloudGuardianAuditRole.Arn
+    Export:
+      Name: CloudGuardianAuditRoleArn
