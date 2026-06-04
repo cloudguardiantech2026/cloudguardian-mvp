@@ -387,7 +387,7 @@ def index():
 #   from urllib.parse import urlencode
 
 # Raw GitHub URLs for the hosted templates
-CF_TEMPLATE_URL  = "https://raw.githubusercontent.com/cloudguardiantech2026/cloudguardian-mvp/main/cloudguardian_aws.yaml"
+CF_TEMPLATE_URL = "https://cloudguardian-templates.s3.eu-west-2.amazonaws.com/cloudguardian_aws.yaml"
 ARM_TEMPLATE_URL = "https://raw.githubusercontent.com/cloudguardiantech2026/cloudguardian-mvp/main/cloudguardian_azure.json"
 
 # AWS CloudFormation Quick-Create base URL
