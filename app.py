@@ -1,19 +1,20 @@
 import json
 import os
 import markdown
-from flask import Flask, render_template, request, send_file, session, jsonify
+from flask import Flask, render_template, request, send_file, session, jsonify, Response
 
-from backend.scanners.aws_s3 import get_s3_signals
-from backend.scanners.aws_iam import get_iam_signals
-from backend.scanners.aws_network import get_network_signals
-from backend.scanners.aws_ssm import get_ssm_signals
+from backend.db.customer_db import generate_external_id, create_customer
+from backend.scanners.aws_s3       import get_s3_signals
+from backend.scanners.aws_iam      import get_iam_signals
+from backend.scanners.aws_network  import get_network_signals
+from backend.scanners.aws_ssm      import get_ssm_signals
 from backend.scanners.aws_guardduty import get_guardduty_signals
 
-from backend.scanners.azure.azure_ce1_firewall import scan as azure_ce1
+from backend.scanners.azure.azure_ce1_firewall      import scan as azure_ce1
 from backend.scanners.azure.azure_ce2_secure_config import scan as azure_ce2
 from backend.scanners.azure.azure_ce3_access_control import scan as azure_ce3
-from backend.scanners.azure.azure_ce4_malware import scan as azure_ce4
-from backend.scanners.azure.azure_ce5_patching import scan as azure_ce5
+from backend.scanners.azure.azure_ce4_malware       import scan as azure_ce4
+from backend.scanners.azure.azure_ce5_patching      import scan as azure_ce5
 
 from backend.engine.framework_engine import (
     load_controls, evaluate_controls, calculate_compliance_score,
@@ -29,40 +30,36 @@ app.secret_key = "cloudguardian-secret-2026"
 
 SCAN_CACHE_PATH = "backend/state/scan_cache.json"
 
-
 # ── Cache helpers ──────────────────────────────────────────────────────────────
 
-def save_scan_cache(results, score_data, drift, profile_name):
+def save_scan_cache(results, score_data, drift, role_arn):
     os.makedirs(os.path.dirname(SCAN_CACHE_PATH), exist_ok=True)
     with open(SCAN_CACHE_PATH, "w") as f:
         json.dump({
-            "results": results,
+            "results":    results,
             "score_data": score_data,
-            "drift": drift,
-            "profile_name": profile_name,
+            "drift":      drift,
+            "role_arn":   role_arn,
         }, f)
 
-
-def load_scan_cache(current_profile):
+def load_scan_cache(current_role_arn):
     try:
         with open(SCAN_CACHE_PATH, "r") as f:
             data = json.load(f)
-        if data.get("profile_name", "").strip() == current_profile.strip():
+        if data.get("role_arn", "").strip() == current_role_arn.strip():
             return data
         return None
     except Exception:
         return None
-
 
 def save_azure_cache(azure_results, azure_score_data):
     path = "backend/state/azure_cache.json"
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         json.dump({
-            "azure_results": azure_results,
+            "azure_results":    azure_results,
             "azure_score_data": azure_score_data,
         }, f)
-
 
 def load_azure_cache():
     try:
@@ -71,14 +68,12 @@ def load_azure_cache():
     except Exception:
         return None
 
-
 def clear_scan_cache():
     try:
         if os.path.exists(SCAN_CACHE_PATH):
             os.remove(SCAN_CACHE_PATH)
     except Exception:
         pass
-
 
 def merge_scan_output(scan_output, signals, resources_map):
     signals.update(scan_output.get("signals", {}))
@@ -87,16 +82,15 @@ def merge_scan_output(scan_output, signals, resources_map):
             resources_map[key] = []
         resources_map[key].extend(value)
 
-
 # ── Azure score + LLM helpers ──────────────────────────────────────────────────
 
 def calculate_azure_score(azure_results):
     total = len(azure_results)
     if total == 0:
         return {
-            "score": 0,
-            "risk_level": "UNKNOWN",
-            "auto_fail_triggered": False,
+            "score":                0,
+            "risk_level":           "UNKNOWN",
+            "auto_fail_triggered":  False,
             "certification_status": "No Azure results — run a scan first",
         }
 
@@ -124,28 +118,25 @@ def calculate_azure_score(azure_results):
         cert_status = "READY — no blocking issues detected"
 
     return {
-        "score": score,
-        "risk_level": risk_level,
-        "auto_fail_triggered": auto_fail,
+        "score":                score,
+        "risk_level":           risk_level,
+        "auto_fail_triggered":  auto_fail,
         "certification_status": cert_status,
     }
-
 
 def azure_results_for_llm(azure_results):
     """
     Convert flat Azure list into the dict shape handle_query() and
     generate_control_pdf() expect.
-
-    FIX: key uses index (not resource name) so the resource name
+    Key uses index (not resource name) so the resource name
     does not bleed into the control header in the PDF.
     """
     out = {}
     for i, r in enumerate(azure_results):
-        # Use zero-padded index to keep keys unique and clean
         key = f"{r.get('control', 'unknown')}_{i:03d}"
         out[key] = {
             "name":               r.get("control", ""),
-            "status":             r.get("status", "UNKNOWN"),
+            "status":             r.get("status",  "UNKNOWN"),
             "severity":           "HIGH" if r.get("status") == "FAIL" else "MEDIUM",
             "weight":             20,
             "auto_fail":          "CE3" in r.get("control", "") and r.get("status") == "FAIL",
@@ -160,20 +151,27 @@ def azure_results_for_llm(azure_results):
         }
     return out
 
-
 def generate_azure_pdf(azure_results, azure_score_data):
     """
     Generate a PDF evidence pack from Azure results.
-    FIX: passes provider='Azure' so all wording, timeline, and
-    footer in the PDF are Azure-specific — no AWS wording.
+    Passes provider='Azure' so all wording, timeline, and
+    footer in the PDF are Azure-specific.
     """
     llm_shaped = azure_results_for_llm(azure_results)
     generate_control_pdf(llm_shaped, azure_score_data, provider="Azure")
 
-
 # ── AWS scan ───────────────────────────────────────────────────────────────────
 
-def run_scan(profile_name, access_key, secret_key, region_name):
+def run_scan(role_arn: str, external_id: str, region_name: str = "eu-west-2"):
+    """
+    Runs all five AWS CE scanners using cross-account role credentials.
+
+    Parameters
+    ----------
+    role_arn    : ARN of the CloudGuardian-ReadOnly-AuditRole in the customer account.
+    external_id : Per-customer External ID generated at onboarding.
+    region_name : AWS region to scan.
+    """
     signals       = {}
     resources_map = {}
 
@@ -181,24 +179,24 @@ def run_scan(profile_name, access_key, secret_key, region_name):
                     get_ssm_signals, get_guardduty_signals]:
         merge_scan_output(
             scanner(
-                profile_name=profile_name or None,
-                access_key=access_key or None,
-                secret_key=secret_key or None,
-                region_name=region_name or "eu-west-2",
+                role_arn=role_arn,
+                external_id=external_id,
+                region_name=region_name,
             ),
             signals,
             resources_map,
         )
 
-    previous_signals = load_previous_state(profile_name)
+    previous_signals = load_previous_state(role_arn)
     drift            = detect_drift(previous_signals, signals)
     controls         = load_controls()
     results          = evaluate_controls(signals, controls, resources_map)
     score_data       = calculate_compliance_score(results)
-    save_current_state(signals, profile_name)
-    generate_control_pdf(results, score_data, provider="AWS")
-    return results, score_data, drift
 
+    save_current_state(signals, role_arn)
+    generate_control_pdf(results, score_data, provider="AWS")
+
+    return results, score_data, drift
 
 # ── Azure scan ─────────────────────────────────────────────────────────────────
 
@@ -220,21 +218,21 @@ def run_azure_scan(tenant_id, client_id, client_secret, subscription_id):
                 "status":   "ERROR",
                 "detail":   str(e),
             })
-    return results
 
+    return results
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
+
 @app.route("/download-pdf")
 def download_pdf():
-    current_profile = session.get("profile_name", "")
-    cache = load_scan_cache(current_profile)
+    current_role_arn = session.get("role_arn", "")
+    cache = load_scan_cache(current_role_arn)
     if cache:
         generate_control_pdf(cache["results"], cache["score_data"], provider="AWS")
     pdf_path = "backend/reports/cloudguardian_evidence_pack.pdf"
     return send_file(pdf_path, as_attachment=True,
                      download_name="cloudguardian_aws_evidence_pack.pdf")
-
 
 @app.route("/download-pdf/azure")
 def download_pdf_azure():
@@ -246,11 +244,10 @@ def download_pdf_azure():
     return send_file(pdf_path, as_attachment=True,
                      download_name="cloudguardian_azure_evidence_pack.pdf")
 
-
 @app.route("/download-pdf/ce-prep")
 def download_pdf_ce_prep():
-    current_profile = session.get("profile_name", "")
-    cache = load_scan_cache(current_profile)
+    current_role_arn = session.get("role_arn", "")
+    cache = load_scan_cache(current_role_arn)
     if not cache:
         return "No AWS scan results found. Run a scan first.", 404
     from backend.reports.pdf_generator import generate_ce_prep_report
@@ -258,7 +255,6 @@ def download_pdf_ce_prep():
     return send_file("backend/reports/cloudguardian_ce_prep_report.pdf",
                      as_attachment=True,
                      download_name="cloudguardian_ce_prep_report_aws.pdf")
-
 
 @app.route("/download-pdf/ce-prep/azure")
 def download_pdf_ce_prep_azure():
@@ -271,7 +267,6 @@ def download_pdf_ce_prep_azure():
     return send_file("backend/reports/cloudguardian_ce_prep_report.pdf",
                      as_attachment=True,
                      download_name="cloudguardian_ce_prep_report_azure.pdf")
-
 
 @app.route("/scan/azure", methods=["POST"])
 def scan_azure():
@@ -296,12 +291,10 @@ def scan_azure():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 @app.route("/ask/azure", methods=["POST"])
 def ask_azure():
     data  = request.get_json(silent=True) or {}
     query = data.get("query", "").strip()
-
     if not query:
         return jsonify({"error": "No query provided."}), 400
 
@@ -316,7 +309,6 @@ def ask_azure():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 @app.route("/", methods=["GET", "POST"])
 def index():
     response = None
@@ -326,37 +318,36 @@ def index():
         action = request.form.get("action")
 
         if action == "set_connection":
-            profile_name = request.form.get("profile_name", "").strip()
-            access_key   = request.form.get("access_key",   "").strip()
-            secret_key   = request.form.get("secret_key",   "").strip()
-            region_name  = request.form.get("region_name",  "").strip() or "eu-west-2"
+            # Cross-account role credentials — no static keys
+            role_arn    = request.form.get("role_arn",    "").strip()
+            external_id = request.form.get("external_id", "").strip()
+            region_name = request.form.get("region_name", "").strip() or "eu-west-2"
 
             session.clear()
             session.modified        = True
-            session["profile_name"] = profile_name
-            session["access_key"]   = access_key
-            session["secret_key"]   = secret_key
+            session["role_arn"]     = role_arn
+            session["external_id"]  = external_id
             session["region_name"]  = region_name
             clear_scan_cache()
 
         elif action == "scan":
-            profile_name = session.get("profile_name", "").strip()
-            access_key   = session.get("access_key",   "").strip()
-            secret_key   = session.get("secret_key",   "").strip()
-            region_name  = session.get("region_name",  "eu-west-2").strip()
+            role_arn    = session.get("role_arn",    "").strip()
+            external_id = session.get("external_id", "").strip()
+            region_name = session.get("region_name", "eu-west-2").strip()
 
-            try:
-                results, score_data, drift = run_scan(
-                    profile_name, access_key, secret_key, region_name
-                )
-                save_scan_cache(results, score_data, drift, profile_name)
-            except Exception as e:
-                error = f"Scan failed: {str(e)}"
+            if not role_arn or not external_id:
+                error = "AWS Role ARN and External ID are required. Please connect your AWS account first."
+            else:
+                try:
+                    results, score_data, drift = run_scan(role_arn, external_id, region_name)
+                    save_scan_cache(results, score_data, drift, role_arn)
+                except Exception as e:
+                    error = f"Scan failed: {str(e)}"
 
         elif action == "ask":
-            query           = request.form.get("query", "").strip()
-            current_profile = session.get("profile_name", "").strip()
-            cache           = load_scan_cache(current_profile)
+            query            = request.form.get("query", "").strip()
+            current_role_arn = session.get("role_arn", "").strip()
+            cache            = load_scan_cache(current_role_arn)
 
             if cache:
                 try:
@@ -372,11 +363,11 @@ def index():
             else:
                 error = "Please run a compliance scan first before asking questions."
 
-    current_profile = session.get("profile_name", "").strip()
-    cache           = load_scan_cache(current_profile)
-    results         = cache["results"]    if cache else {}
-    score_data      = cache["score_data"] if cache else None
-    drift           = cache["drift"]      if cache else []
+    current_role_arn = session.get("role_arn", "").strip()
+    cache            = load_scan_cache(current_role_arn)
+    results          = cache["results"]    if cache else {}
+    score_data       = cache["score_data"] if cache else None
+    drift            = cache["drift"]      if cache else []
 
     return render_template(
         "index.html",
@@ -385,9 +376,55 @@ def index():
         drift=drift,
         response=response,
         error=error,
-        current_profile=current_profile,
-        current_access_key=session.get("access_key", ""),
+        current_role_arn=current_role_arn,
         current_region=session.get("region_name", "eu-west-2"),
+    )
+
+# ── Add this import at the top of app.py alongside existing imports ───────────
+# from backend.db.customer_db import generate_external_id, create_customer
+# from flask import Response   (add Response to existing flask import line)
+
+# ── Add this route to app.py ──────────────────────────────────────────────────
+
+@app.route("/connect/aws")
+def connect_aws():
+    """
+    Generates a unique External ID for this onboarding session, stores it in
+    the SQLite database, pre-fills the Terraform template, and serves it as a
+    downloadable .tf file.
+
+    The customer:
+      1. Downloads this file
+      2. Runs terraform init && terraform apply
+      3. Copies the aws_role_arn output back into the CloudGuardian dashboard
+      4. Enters their External ID (shown on screen before download)
+
+    The External ID is stored in session so the dashboard can pre-fill it.
+    """
+    from backend.db.customer_db import generate_external_id, create_customer
+
+    # Generate and persist the External ID
+    external_id = generate_external_id()
+    create_customer(external_id)
+
+    # Store in session so the connection form can pre-fill it
+    session["external_id"] = external_id
+
+    # Load the Terraform template and substitute the placeholder
+    tf_template_path = os.path.join(
+        os.path.dirname(__file__), "cloudguardian_connect.tf"
+    )
+    with open(tf_template_path, "r") as f:
+        tf_content = f.read()
+
+    tf_content = tf_content.replace("{{EXTERNAL_ID}}", external_id)
+
+    return Response(
+        tf_content,
+        mimetype="text/plain",
+        headers={
+            "Content-Disposition": "attachment; filename=cloudguardian_connect.tf"
+        },
     )
 
 

@@ -1,25 +1,29 @@
-import boto3
+from backend.scanners.aws_auth import build_session
 
-def build_session(profile_name=None, access_key=None,
-                  secret_key=None, region_name=None):
-    if access_key and secret_key:
-        return boto3.Session(
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-            region_name=region_name,
-        )
-    return boto3.Session(
-        profile_name=profile_name,
-        region_name=region_name,
-    )
 
-def get_guardduty_signals(profile_name=None, access_key=None,
-                          secret_key=None, region_name="eu-west-2"):
+def get_guardduty_signals(role_arn: str, external_id: str, region_name: str = "eu-west-2") -> dict:
+    """
+    Checks malware protection posture against CE_5_1 (Malware Protection).
+
+    Signals raised:
+      GUARDDUTY_DISABLED               — GuardDuty is not enabled or detector is inactive
+      GUARDDUTY_ACTIVE_MALWARE_FINDING — one or more active malware-related findings
+                                         with severity >= 4 exist in the account
+      GUARDDUTY_S3_PROTECTION_DISABLED — GuardDuty S3 Malware Protection is not configured
+
+    Parameters
+    ----------
+    role_arn    : ARN of the CloudGuardian-ReadOnly-AuditRole in the customer account.
+    external_id : Per-customer External ID generated at onboarding.
+    region_name : AWS region to scan.
+    """
+
     signals = {
-        "GUARDDUTY_DISABLED":                  False,
-        "GUARDDUTY_ACTIVE_MALWARE_FINDING":    False,
-        "GUARDDUTY_S3_PROTECTION_DISABLED":    False,
+        "GUARDDUTY_DISABLED":               False,
+        "GUARDDUTY_ACTIVE_MALWARE_FINDING": False,
+        "GUARDDUTY_S3_PROTECTION_DISABLED": False,
     }
+
     resources = {
         "GUARDDUTY_DISABLED":               [],
         "GUARDDUTY_ACTIVE_MALWARE_FINDING": [],
@@ -27,11 +31,10 @@ def get_guardduty_signals(profile_name=None, access_key=None,
     }
 
     try:
-        session = build_session(profile_name, access_key,
-                                secret_key, region_name)
-        gd = session.client("guardduty", region_name=region_name)
+        session = build_session(role_arn, external_id, region_name)
+        gd      = session.client("guardduty", region_name=region_name)
 
-        # ── 1. Check if GuardDuty is enabled ─────────────────
+        # ── 1. Check if GuardDuty is enabled ──────────────────────────────────
         try:
             detectors = gd.list_detectors().get("DetectorIds", [])
         except Exception:
@@ -46,7 +49,7 @@ def get_guardduty_signals(profile_name=None, access_key=None,
 
         detector_id = detectors[0]
 
-        # ── 2. Check detector status ──────────────────────────
+        # ── 2. Check detector status ───────────────────────────────────────────
         try:
             detector = gd.get_detector(DetectorId=detector_id)
             if detector.get("Status") != "ENABLED":
@@ -57,25 +60,26 @@ def get_guardduty_signals(profile_name=None, access_key=None,
         except Exception:
             pass
 
-        # ── 3. Check for active malware findings ──────────────
+        # ── 3. Check for active malware-related findings ───────────────────────
         try:
             finding_ids = []
-            paginator = gd.get_paginator("list_findings")
+            paginator   = gd.get_paginator("list_findings")
+
             for page in paginator.paginate(
                 DetectorId=detector_id,
                 FindingCriteria={
                     "Criterion": {
                         "service.archived": {"Eq": ["false"]},
-                        "severity": {"Gte": 4},
+                        "severity":         {"Gte": 4},
                     }
-                }
+                },
             ):
                 finding_ids.extend(page.get("FindingIds", []))
 
             if finding_ids:
                 findings = gd.get_findings(
                     DetectorId=detector_id,
-                    FindingIds=finding_ids[:50]
+                    FindingIds=finding_ids[:50],
                 ).get("Findings", [])
 
                 malware_types = [
@@ -107,13 +111,13 @@ def get_guardduty_signals(profile_name=None, access_key=None,
         except Exception:
             pass
 
-        # ── 4. Check S3 malware protection ────────────────────
+        # ── 4. Check S3 malware protection ────────────────────────────────────
         try:
-            s3_protection = gd.get_malware_protection_plan(
-                DetectorId=detector_id
+            s3_protection = gd.get_malware_protection_plan(DetectorId=detector_id)
+            status = (
+                s3_protection.get("MalwareProtectionPlanId", {})
+                or s3_protection.get("Status", "")
             )
-            status = (s3_protection.get("MalwareProtectionPlanId", {})
-                      or s3_protection.get("Status", ""))
             if not status:
                 signals["GUARDDUTY_S3_PROTECTION_DISABLED"] = True
                 resources["GUARDDUTY_S3_PROTECTION_DISABLED"].append(
@@ -130,4 +134,7 @@ def get_guardduty_signals(profile_name=None, access_key=None,
     except Exception:
         pass
 
-    return {"signals": signals, "resources": resources}
+    return {
+        "signals":   signals,
+        "resources": resources,
+    }

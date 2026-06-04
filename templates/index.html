@@ -406,8 +406,8 @@
         <h1>CloudGuardian</h1>
         <p class="subtitle">Cloud compliance intelligence for Cyber Essentials</p>
 
-        {% if current_profile %}
-        <div class="profile-badge">&#x1F4BB; Active account: <strong>{{ current_profile }}</strong></div>
+        {% if current_role_arn %}
+        <div class="profile-badge">&#x1F4BB; Connected: <strong>{{ current_role_arn }}</strong></div>
         {% endif %}
 
         {% if error %}
@@ -428,25 +428,69 @@
             <!-- AWS Connection -->
             <div class="card">
                 <h2>AWS Connection</h2>
-                <p style="color:#8b949e;font-size:0.9rem;">Connect your AWS account to run a compliance scan. Choose one
-                    method below.</p>
+                <p style="color:#8b949e;font-size:0.9rem;">
+                    Connect your AWS account securely in three steps. No access keys required —
+                    CloudGuardian uses a temporary, read-only session via AWS STS.
+                </p>
+
+                <!-- Step 1 — Download -->
+                <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.25rem;">
+                    <div
+                        style="background:#1F3D6B;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.85rem;flex-shrink:0;">
+                        1</div>
+                    <div>
+                        <p style="color:#e6edf3;font-size:0.9rem;margin:0 0 0.5rem;">
+                            Download your pre-configured Terraform file. It contains your unique
+                            External ID and the CloudGuardian account ID — no editing required.
+                        </p>
+                        <a href="/connect/aws" class="btn" style="text-decoration:none;">
+                            &#x2B07; Download cloudguardian_connect.tf
+                        </a>
+                        {% if session.get('external_id') %}
+                        <p style="color:#8b949e;font-size:0.82rem;margin-top:0.5rem;">
+                            Your External ID: <code style="color:#e3b341;">{{ session.get('external_id') }}</code>
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Step 2 — Deploy -->
+                <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.25rem;">
+                    <div
+                        style="background:#1F3D6B;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.85rem;flex-shrink:0;">
+                        2</div>
+                    <div>
+                        <p style="color:#e6edf3;font-size:0.9rem;margin:0;">
+                            In your terminal, run:
+                        </p>
+                        <pre
+                            style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:10px 14px;font-size:0.85rem;color:#3fb950;margin:0.5rem 0 0;">terraform init &amp;&amp; terraform apply</pre>
+                    </div>
+                </div>
+
+                <!-- Step 3 — Paste outputs -->
+                <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;">
+                    <div
+                        style="background:#1F3D6B;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.85rem;flex-shrink:0;">
+                        3</div>
+                    <p style="color:#e6edf3;font-size:0.9rem;margin:0;">
+                        Copy the <code style="color:#e3b341;">aws_role_arn</code> output from Terraform
+                        and paste it below along with your External ID.
+                    </p>
+                </div>
+
                 <form method="POST">
                     <input type="hidden" name="action" value="set_connection">
-                    <h3>Option 1 — AWS CLI Profile</h3>
-                    <p style="color:#8b949e;font-size:0.85rem;">Use a locally configured AWS profile (e.g. from
-                        <code>aws configure --profile ...</code>)</p>
-                    <label>Profile name</label>
-                    <input type="text" name="profile_name" placeholder="e.g. oputprojectuser"
-                        value="{{ current_profile }}">
-                    <div class="divider">— or —</div>
-                    <h3>Option 2 — Temporary Access Keys</h3>
-                    <p style="color:#8b949e;font-size:0.85rem;">For live demos or external accounts. Keys are not stored
-                        permanently.</p>
-                    <label>AWS Access Key ID</label>
-                    <input type="text" name="access_key" placeholder="AKIA..." value="{{ current_access_key }}">
+                    <label>IAM Role ARN</label>
+                    <input type="text" name="role_arn"
+                        placeholder="arn:aws:iam::123456789012:role/CloudGuardian-ReadOnly-AuditRole"
+                        value="{{ current_role_arn }}">
                     <br><br>
-                    <label>AWS Secret Access Key</label>
-                    <input type="password" name="secret_key" placeholder="Enter secret access key">
+                    <label>External ID</label>
+                    <p style="color:#8b949e;font-size:0.83rem;margin:4px 0 6px;">
+                        Your unique CloudGuardian customer ID — provided when you downloaded the Terraform file.
+                    </p>
+                    <input type="text" name="external_id" placeholder="e.g. cg-a1b2c3d4-e5f6-7890-abcd-ef1234567890">
                     <br><br>
                     <label>AWS Region</label>
                     <input type="text" name="region_name" placeholder="eu-west-2" value="{{ current_region }}">
