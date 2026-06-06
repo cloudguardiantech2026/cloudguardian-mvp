@@ -491,6 +491,13 @@ def verify_aws():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
+@app.route("/debug/env")
+def debug_env():
+    return jsonify({
+        "AWS_ACCESS_KEY_ID":     "SET" if os.environ.get("AWS_ACCESS_KEY_ID") else "MISSING",
+        "AWS_SECRET_ACCESS_KEY": "SET" if os.environ.get("AWS_SECRET_ACCESS_KEY") else "MISSING",
+        "AWS_DEFAULT_REGION":    os.environ.get("AWS_DEFAULT_REGION", "MISSING"),
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
