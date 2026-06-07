@@ -879,6 +879,9 @@
                     See how it works →
                 </a>
             </div>
+            <p style="color:var(--grey);font-size:0.8rem;margin-top:0.75rem;">
+                No credit card required. Connects via temporary, read-only session. Nothing changed in your account.
+            </p>
             <div class="hero-trust">
                 <span class="trust-item">
                     <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
@@ -1053,13 +1056,22 @@
                 Go to Dashboard →
             </a>
         </div>
+        <p style="color:var(--grey);font-size:0.8rem;margin-top:1rem;position:relative;">
+            No credit card required · Read-only access · Nothing changed in your account
+        </p>
     </div>
 
     <!-- FOOTER -->
     <footer>
-        <p>© 2026 CloudGuardian · OputGuard Technologies Ltd · Built for UK SMEs</p>
+        <div>
+            <p>© 2026 CloudGuardian · OputGuard Technologies Ltd</p>
+            <p style="font-size:0.78rem;margin-top:0.25rem;color:#5a7090;">
+                Company Registration No. [pending] · Registered in England & Wales
+            </p>
+        </div>
         <div class="footer-links">
             <a href="/dashboard">Dashboard</a>
+            <a href="/privacy">Privacy Policy</a>
             <a href="https://www.ncsc.gov.uk/cyberessentials/overview" target="_blank">About Cyber Essentials</a>
             <a href="https://www.iasme.co.uk" target="_blank">IASME</a>
         </div>
@@ -1123,71 +1135,74 @@
     </div>
 
     <script>
-    function openModal(path) {
-        document.getElementById('modal').classList.add('active');
-        if (path === 'business') selectPath('business');
-        if (path === 'technical') {
-            document.getElementById('path-technical').click();
-        }
-    }
-
-    function closeModal() {
-        document.getElementById('modal').classList.remove('active');
-        document.getElementById('business-options').style.display = 'none';
-        document.getElementById('invite-form').classList.remove('active');
-    }
-
-    function closeModalOutside(e) {
-        if (e.target === document.getElementById('modal')) closeModal();
-    }
-
-    function selectPath(path) {
-        document.querySelectorAll('.path-option').forEach(el => el.classList.remove('selected'));
-        document.getElementById('path-' + path).classList.add('selected');
-        if (path === 'business') {
-            document.getElementById('business-options').style.display = 'grid';
-        }
-    }
-
-    function showInviteForm() {
-        document.getElementById('invite-form').classList.add('active');
-        document.getElementById('invite-email').focus();
-    }
-
-    function sendInvite() {
-        const email = document.getElementById('invite-email').value.trim();
-        const name  = document.getElementById('invite-name').value.trim();
-        const result = document.getElementById('invite-result');
-
-        if (!email || !email.includes('@')) {
-            result.style.display = 'block';
-            result.style.color   = 'var(--red)';
-            result.textContent   = 'Please enter a valid email address.';
-            return;
-        }
-
-        fetch('/invite/it-provider', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, business_name: name })
-        })
-        .then(r => r.json())
-        .then(data => {
-            result.style.display = 'block';
-            if (data.success) {
-                result.style.color = 'var(--green)';
-                result.textContent = '✓ Invite sent. Your IT provider will receive a link to connect your account.';
-            } else {
-                result.style.color = 'var(--red)';
-                result.textContent = 'Something went wrong. Please try again.';
+        function openModal(path) {
+            document.getElementById('modal').classList.add('active');
+            if (path === 'business') selectPath('business');
+            if (path === 'technical') {
+                document.getElementById('path-technical').click();
             }
-        })
-        .catch(() => {
-            result.style.display = 'block';
-            result.style.color   = 'var(--red)';
-            result.textContent   = 'Could not send invite. Please try again.';
-        });
-    }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+            document.getElementById('business-options').style.display = 'none';
+            document.getElementById('invite-form').classList.remove('active');
+        }
+
+        function closeModalOutside(e) {
+            if (e.target === document.getElementById('modal')) closeModal();
+        }
+
+        function selectPath(path) {
+            document.querySelectorAll('.path-option').forEach(el => el.classList.remove('selected'));
+            document.getElementById('path-' + path).classList.add('selected');
+            if (path === 'business') {
+                document.getElementById('business-options').style.display = 'grid';
+            }
+        }
+
+        function showInviteForm() {
+            document.getElementById('invite-form').classList.add('active');
+            document.getElementById('invite-email').focus();
+        }
+
+        function sendInvite() {
+            const email = document.getElementById('invite-email').value.trim();
+            const name = document.getElementById('invite-name').value.trim();
+            const result = document.getElementById('invite-result');
+
+            if (!email || !email.includes('@')) {
+                result.style.display = 'block';
+                result.style.color = 'var(--red)';
+                result.textContent = 'Please enter a valid email address.';
+                return;
+            }
+
+            // Generate a simple client reference token for tracking
+            const clientToken = 'cg-client-' + Date.now().toString(36);
+
+            fetch('/invite/it-provider', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, business_name: name, client_token: clientToken })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    result.style.display = 'block';
+                    if (data.success) {
+                        result.style.color = 'var(--green)';
+                        result.textContent = '✓ Invite sent. Your IT provider will receive a link to connect your account.';
+                    } else {
+                        result.style.color = 'var(--red)';
+                        result.textContent = 'Something went wrong. Please try again.';
+                    }
+                })
+                .catch(() => {
+                    result.style.display = 'block';
+                    result.style.color = 'var(--red)';
+                    result.textContent = 'Could not send invite. Please try again.';
+                });
+        }
     </script>
 </body>
 

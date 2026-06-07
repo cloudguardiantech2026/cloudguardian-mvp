@@ -392,24 +392,20 @@ def index():
 # 4. Add invite IT provider route (called by landing page modal)
 @app.route("/invite/it-provider", methods=["POST"])
 def invite_it_provider():
-    """
-    Accepts an IT provider email address and sends them a dashboard link.
-    For MVP: logs the invite. Full email sending can be added later.
-    """
-    data         = request.get_json(silent=True) or {}
-    email        = data.get("email",         "").strip()
+    data          = request.get_json(silent=True) or {}
+    email         = data.get("email",         "").strip()
     business_name = data.get("business_name", "").strip()
- 
+    client_token  = data.get("client_token",  "").strip()
+
     if not email or "@" not in email:
         return jsonify({"success": False, "error": "Invalid email"}), 400
- 
-    # Log the invite — replace with email sending (e.g. SendGrid) post-MVP
-    print(f"[INVITE] IT provider invite: {email} for business: {business_name or 'unknown'}")
- 
-    # TODO: integrate SendGrid or AWS SES to send actual invite email
-    # The email should contain a direct link to /dashboard with a
-    # pre-generated External ID so the IT provider can connect immediately
- 
+
+    # The dashboard link sent to IT provider includes client tracking token
+    dashboard_link = f"https://cloudguardian-mvp.onrender.com/dashboard?client={client_token}"
+
+    print(f"[INVITE] To: {email} | Business: {business_name or 'unknown'} | Link: {dashboard_link}")
+
+    # TODO: send actual email via SendGrid/AWS SES with dashboard_link
     return jsonify({"success": True})
 
 
