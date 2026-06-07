@@ -1,7 +1,7 @@
 import json
 import os
 import markdown
-from flask import Flask, render_template, request, send_file, session, jsonify, Response, redirect
+from flask import Flask, render_template, request, send_file,send_from_directory, session, jsonify, Response, redirect
 
 from flask import send_from_directory
 from urllib.parse import urlencode, quote
@@ -522,7 +522,21 @@ def verify_aws():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
+@app.route("/")
+def landing():
+    return send_from_directory("templates", "landing.html")
 
+@app.route("/invite/it-provider", methods=["POST"])
+def invite_it_provider():
+    data          = request.get_json(silent=True) or {}
+    email         = data.get("email",         "").strip()
+    business_name = data.get("business_name", "").strip()
+
+    if not email or "@" not in email:
+        return jsonify({"success": False, "error": "Invalid email"}), 400
+
+    print(f"[INVITE] IT provider invite: {email} for business: {business_name or 'unknown'}")
+    return jsonify({"success": True})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
