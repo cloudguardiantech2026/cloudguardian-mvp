@@ -522,9 +522,6 @@ def verify_aws():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
-@app.route("/")
-def landing():
-    return send_from_directory("templates", "landing.html")
 
 @app.route("/invite/it-provider", methods=["POST"])
 def invite_it_provider():
