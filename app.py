@@ -318,6 +318,10 @@ def landing():
     """
     return send_from_directory("templates", "landing.html")
 
+@app.route("/privacy")
+def privacy():
+    return send_from_directory("templates", "privacy.html")
+
 @app.route("/dashboard", methods=["GET", "POST"])
 def index():
     response = None

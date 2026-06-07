@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — CloudGuardian</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --navy: #0A1628;
+            --navy-mid: #0F2040;
+            --navy-card: #132238;
+            --blue: #1A6FE8;
+            --blue-light: #3B8EFF;
+            --cyan: #00D4FF;
+            --white: #F0F6FF;
+            --grey: #7A91B0;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--navy);
+            color: var(--white);
+            line-height: 1.7;
+        }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.2rem 4rem;
+            background: rgba(10, 22, 40, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-logo {
+            font-family: 'Sora', sans-serif;
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: var(--white);
+            text-decoration: none;
+        }
+
+        .nav-logo span {
+            color: var(--cyan);
+        }
+
+        .nav-back {
+            color: var(--grey);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .nav-back:hover {
+            color: var(--white);
+        }
+
+        /* ── CONTENT ── */
+        .container {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 8rem 2rem 6rem;
+        }
+
+        .page-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--cyan);
+            margin-bottom: 0.75rem;
+        }
+
+        h1 {
+            font-family: 'Sora', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 0.75rem;
+        }
+
+        .last-updated {
+            color: var(--grey);
+            font-size: 0.88rem;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h2 {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 2.5rem 0 0.75rem;
+            color: var(--white);
+        }
+
+        p {
+            color: var(--grey);
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+            line-height: 1.75;
+        }
+
+        ul {
+            color: var(--grey);
+            font-size: 0.95rem;
+            padding-left: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        ul li {
+            margin-bottom: 0.4rem;
+            line-height: 1.65;
+        }
+
+        strong {
+            color: var(--white);
+            font-weight: 600;
+        }
+
+        .highlight-box {
+            background: var(--navy-card);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--cyan);
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .highlight-box p {
+            margin: 0;
+            font-size: 0.92rem;
+        }
+
+        .contact-block {
+            background: var(--navy-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.75rem 2rem;
+            margin-top: 3rem;
+        }
+
+        .contact-block h3 {
+            font-family: 'Sora', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .contact-block p {
+            margin: 0.25rem 0;
+            font-size: 0.9rem;
+        }
+
+        .contact-block a {
+            color: var(--blue-light);
+            text-decoration: none;
+        }
+
+        .contact-block a:hover {
+            text-decoration: underline;
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 2rem 4rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        footer p {
+            color: var(--grey);
+            font-size: 0.82rem;
+        }
+
+        footer a {
+            color: var(--grey);
+            text-decoration: none;
+            font-size: 0.82rem;
+            transition: color 0.2s;
+        }
+
+        footer a:hover {
+            color: var(--white);
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem 1.5rem;
+            }
+
+            .container {
+                padding: 7rem 1.25rem 4rem;
+            }
+
+            footer {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-links {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <a href="/" class="nav-logo">☁ Cloud<span>Guardian</span></a>
+        <a href="/" class="nav-back">← Back to home</a>
+    </nav>
+
+    <div class="container">
+        <p class="page-label">Legal</p>
+        <h1>Privacy Policy</h1>
+        <p class="last-updated">Last updated: June 2026 · OputGuard Technologies Ltd</p>
+
+        <div class="highlight-box">
+            <p><strong>Summary:</strong> CloudGuardian uses temporary, read-only access to scan your cloud environment
+                for Cyber Essentials compliance. We do not store your cloud credentials, access keys, or infrastructure
+                data beyond what is needed to generate your compliance report. Your data is never sold or shared with
+                third parties for marketing purposes.</p>
+        </div>
+
+        <h2>1. Who We Are</h2>
+        <p>CloudGuardian is operated by <strong>OputGuard Technologies Ltd</strong>, a company registered in England and
+            Wales (Company Registration No. pending). We provide cloud compliance intelligence services to UK small and
+            medium-sized enterprises (SMEs) and IT professionals.</p>
+        <p>For the purposes of UK data protection law, OputGuard Technologies Ltd is the data controller for personal
+            data processed through the CloudGuardian platform.</p>
+
+        <h2>2. What Data We Collect</h2>
+        <p>We collect and process the following categories of data:</p>
+        <ul>
+            <li><strong>Account connection data:</strong> AWS IAM Role ARNs and External IDs used to establish temporary
+                read-only access to your cloud account. These are not access keys and cannot be used to make changes to
+                your infrastructure.</li>
+            <li><strong>Scan results:</strong> Technical compliance findings generated from your cloud environment,
+                including resource identifiers, configuration states, and control pass/fail status. This data is stored
+                temporarily to generate your evidence pack and compliance report.</li>
+            <li><strong>Contact information:</strong> Email addresses provided when using the "Invite IT Provider"
+                feature, used solely to send the dashboard invitation link.</li>
+            <li><strong>Usage data:</strong> Standard web server logs including IP addresses, browser type, and pages
+                visited, used for security monitoring and service improvement.</li>
+        </ul>
+
+        <h2>3. What We Do Not Collect</h2>
+        <ul>
+            <li>AWS access keys or secret access keys</li>
+            <li>Azure client secrets or certificates</li>
+            <li>Personal data belonging to your employees, customers, or end users</li>
+            <li>The content of your cloud workloads, databases, or storage objects</li>
+            <li>Payment card information (billing is handled by third-party payment processors)</li>
+        </ul>
+
+        <h2>4. How We Use Your Data</h2>
+        <p>We use the data we collect for the following purposes:</p>
+        <ul>
+            <li>To perform Cyber Essentials compliance scans against your cloud environment</li>
+            <li>To generate evidence packs and compliance reports for your use</li>
+            <li>To detect compliance drift between scan cycles</li>
+            <li>To provide guided remediation recommendations through our conversational interface</li>
+            <li>To send invited IT providers a dashboard access link on your behalf</li>
+            <li>To maintain the security and integrity of our platform</li>
+        </ul>
+
+        <h2>5. How Cloud Access Works</h2>
+        <p>CloudGuardian uses <strong>AWS Security Token Service (STS) AssumeRole</strong> to access your AWS
+            environment. This means:</p>
+        <ul>
+            <li>A temporary session is created with credentials that expire automatically after one hour</li>
+            <li>Access is strictly read-only — CloudGuardian cannot create, modify, or delete any resources in your
+                account</ <li>Your unique External ID ensures only CloudGuardian's platform account can assume the role
+            </li>
+            <li>You can revoke access at any time by deleting the CloudFormation stack from your account</li>
+        </ul>
+        <p>For Azure environments, access is granted via a read-only App Registration with the Reader role assigned at
+            subscription scope. No client secrets are stored by CloudGuardian.</p>
+
+        <h2>6. Data Retention</h2>
+        <p>Scan results and compliance data are retained for the duration of your active session and for a limited
+            period to allow you to retrieve your evidence pack. We do not permanently store detailed infrastructure
+            findings beyond what is necessary to provide the service.</p>
+        <p>Server logs are retained for up to 90 days for security and operational purposes.</p>
+
+        <h2>7. Data Sharing</h2>
+        <p>We do not sell, rent, or share your personal data with third parties for marketing purposes. We may share
+            data with:</p>
+        <ul>
+            <li><strong>Infrastructure providers:</strong> Our platform is hosted on Render.com and uses AWS
+                infrastructure. These providers process data only as necessary to operate our services.</li>
+            <li><strong>AI processing:</strong> Our conversational compliance assistant uses the Anthropic API. Scan
+                findings provided to this service are used solely to generate compliance guidance and are subject to
+                Anthropic's privacy policy.</li>
+            <li><strong>Legal obligations:</strong> We may disclose data if required to do so by law or in response to
+                valid requests by public authorities.</li>
+        </ul>
+
+        <h2>8. Your Rights</h2>
+        <p>Under UK data protection law (UK GDPR), you have the following rights:</p>
+        <ul>
+            <li><strong>Right of access:</strong> You can request a copy of the personal data we hold about you.</li>
+            <li><strong>Right to rectification:</strong> You can ask us to correct inaccurate or incomplete data.</li>
+            <li><strong>Right to erasure:</strong> You can ask us to delete your personal data in certain circumstances.
+            </li>
+            <li><strong>Right to restriction:</strong> You can ask us to restrict processing of your data in certain
+                circumstances.</li>
+            <li><strong>Right to data portability:</strong> You can ask us to provide your data in a machine-readable
+                format.</li>
+            <li><strong>Right to object:</strong> You can object to processing of your personal data in certain
+                circumstances.</li>
+        </ul>
+        <p>To exercise any of these rights, please contact us using the details below. We will respond within 30 days.
+        </p>
+
+        <h2>9. Cookies</h2>
+        <p>CloudGuardian uses session cookies to maintain your connection state during an active compliance session.
+            These cookies are essential for the platform to function and are deleted when you close your browser. We do
+            not use tracking cookies or third-party advertising cookies.</p>
+
+        <h2>10. Security</h2>
+        <p>We take the security of your data seriously. Our platform uses HTTPS encryption for all data in transit, and
+            we follow security best practices including the principle of least privilege for all cloud access. Scan
+            results are not permanently stored on our servers beyond what is necessary to provide the service.</p>
+
+        <h2>11. Changes to This Policy</h2>
+        <p>We may update this privacy policy from time to time. We will notify users of material changes by updating the
+            "Last updated" date at the top of this page. Continued use of the platform after changes are posted
+            constitutes acceptance of the revised policy.</p>
+
+        <h2>12. Complaints</h2>
+        <p>If you have concerns about how we handle your personal data, you have the right to lodge a complaint with the
+            <strong>Information Commissioner's Office (ICO)</strong>, the UK's supervisory authority for data protection
+            matters.</p>
+        <p>ICO website: <a href="https://ico.org.uk" target="_blank" style="color:var(--blue-light);">ico.org.uk</a> ·
+            Helpline: 0303 123 1113</p>
+
+        <div class="contact-block">
+            <h3>Contact Us</h3>
+            <p>For privacy-related enquiries or to exercise your data rights:</p>
+            <p><strong>OputGuard Technologies Ltd</strong></p>
+            <p>Email: <a href="mailto:privacy@cloudguardian.io">privacy@cloudguardian.io</a></p>
+            <p>Platform: <a href="https://cloudguardian-mvp.onrender.com">cloudguardian-mvp.onrender.com</a></p>
+        </div>
+    </div>
+
+    <footer>
+        <div>
+            <p>© 2026 CloudGuardian · OputGuard Technologies Ltd</p>
+            <p style="margin-top:0.2rem;">Company Registration No. [pending] · Registered in England & Wales</p>
+        </div>
+        <div class="footer-links">
+            <a href="/">Home</a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="https://www.ncsc.gov.uk/cyberessentials/overview" target="_blank">About Cyber Essentials</a>
+        </div>
+    </footer>
+
+</body>
+
+</html>
