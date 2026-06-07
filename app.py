@@ -3,6 +3,7 @@ import os
 import markdown
 from flask import Flask, render_template, request, send_file, session, jsonify, Response, redirect
 
+from flask import send_from_directory
 from urllib.parse import urlencode, quote
 from backend.db.customer_db import generate_external_id, create_customer
 from backend.scanners.aws_s3       import get_s3_signals
@@ -309,8 +310,15 @@ def ask_azure():
         return jsonify({"response": markdown.markdown(response)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route("/")
+def landing():
+    """
+    Public-facing landing page for non-technical SME visitors.
+    """
+    return send_from_directory("templates", "landing.html")
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/dashboard", methods=["GET", "POST"])
 def index():
     response = None
     error    = None
@@ -380,6 +388,29 @@ def index():
         current_role_arn=current_role_arn,
         current_region=session.get("region_name", "eu-west-2"),
     )
+
+# 4. Add invite IT provider route (called by landing page modal)
+@app.route("/invite/it-provider", methods=["POST"])
+def invite_it_provider():
+    """
+    Accepts an IT provider email address and sends them a dashboard link.
+    For MVP: logs the invite. Full email sending can be added later.
+    """
+    data         = request.get_json(silent=True) or {}
+    email        = data.get("email",         "").strip()
+    business_name = data.get("business_name", "").strip()
+ 
+    if not email or "@" not in email:
+        return jsonify({"success": False, "error": "Invalid email"}), 400
+ 
+    # Log the invite — replace with email sending (e.g. SendGrid) post-MVP
+    print(f"[INVITE] IT provider invite: {email} for business: {business_name or 'unknown'}")
+ 
+    # TODO: integrate SendGrid or AWS SES to send actual invite email
+    # The email should contain a direct link to /dashboard with a
+    # pre-generated External ID so the IT provider can connect immediately
+ 
+    return jsonify({"success": True})
 
 
 # ── Replace the existing /connect/aws route and add /connect/azure ────────────

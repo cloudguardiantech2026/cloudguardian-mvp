@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudGuardian — Cyber Essentials Compliance for UK Businesses</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --navy: #0A1628;
+            --navy-mid: #0F2040;
+            --navy-card: #132238;
+            --blue: #1A6FE8;
+            --blue-light: #3B8EFF;
+            --cyan: #00D4FF;
+            --green: #00C48C;
+            --amber: #FFB020;
+            --red: #FF4D4D;
+            --white: #F0F6FF;
+            --grey: #7A91B0;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--navy);
+            color: var(--white);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.2rem 4rem;
+            background: rgba(10, 22, 40, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-logo {
+            font-family: 'Sora', sans-serif;
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: var(--white);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-logo span {
+            color: var(--cyan);
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 2.5rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--grey);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--white);
+        }
+
+        .nav-cta {
+            background: var(--blue);
+            color: var(--white) !important;
+            padding: 0.6rem 1.4rem;
+            border-radius: 6px;
+            font-weight: 600 !important;
+            transition: background 0.2s !important;
+        }
+
+        .nav-cta:hover {
+            background: var(--blue-light) !important;
+            color: var(--white) !important;
+        }
+
+        /* ── HERO ── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8rem 2rem 5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 50% 0%, rgba(26, 111, 232, 0.18) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 40% at 20% 80%, rgba(0, 212, 255, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 40% 40% at 80% 80%, rgba(0, 196, 140, 0.06) 0%, transparent 60%);
+        }
+
+        .hero-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+        }
+
+        .hero-content {
+            position: relative;
+            max-width: 860px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.25);
+            color: var(--cyan);
+            padding: 0.4rem 1rem;
+            border-radius: 100px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 1.75rem;
+            animation: fadeUp 0.6s ease both;
+        }
+
+        .hero-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--cyan);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
+        }
+
+        .hero h1 {
+            font-family: 'Sora', sans-serif;
+            font-size: clamp(2.4rem, 5.5vw, 4rem);
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 1.5rem;
+            animation: fadeUp 0.6s ease 0.1s both;
+        }
+
+        .hero h1 em {
+            font-style: normal;
+            background: linear-gradient(135deg, var(--cyan), var(--blue-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-sub {
+            font-size: 1.15rem;
+            color: var(--grey);
+            max-width: 620px;
+            margin: 0 auto 2.5rem;
+            font-weight: 300;
+            line-height: 1.7;
+            animation: fadeUp 0.6s ease 0.2s both;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeUp 0.6s ease 0.3s both;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--blue);
+            color: #fff;
+            padding: 0.9rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            box-shadow: 0 4px 24px rgba(26, 111, 232, 0.35);
+        }
+
+        .btn-primary:hover {
+            background: var(--blue-light);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(26, 111, 232, 0.45);
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: transparent;
+            color: var(--white);
+            padding: 0.9rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            text-decoration: none;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .hero-trust {
+            margin-top: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            animation: fadeUp 0.6s ease 0.4s both;
+        }
+
+        .trust-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--grey);
+            font-size: 0.85rem;
+        }
+
+        .trust-item svg {
+            color: var(--green);
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ── PROBLEM BANNER ── */
+        .problem-banner {
+            background: linear-gradient(135deg, rgba(255, 77, 77, 0.12), rgba(255, 176, 32, 0.08));
+            border-top: 1px solid rgba(255, 77, 77, 0.2);
+            border-bottom: 1px solid rgba(255, 77, 77, 0.2);
+            padding: 2rem 4rem;
+            text-align: center;
+        }
+
+        .problem-banner h2 {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--white);
+            margin-bottom: 0.4rem;
+        }
+
+        .problem-banner p {
+            color: var(--grey);
+            font-size: 0.95rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .problem-banner strong {
+            color: var(--amber);
+        }
+
+        /* ── SECTIONS ── */
+        section {
+            padding: 6rem 2rem;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--cyan);
+            margin-bottom: 0.75rem;
+        }
+
+        .section-title {
+            font-family: 'Sora', sans-serif;
+            font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+
+        .section-sub {
+            color: var(--grey);
+            font-size: 1rem;
+            max-width: 560px;
+            line-height: 1.7;
+        }
+
+        /* ── HOW IT WORKS ── */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-top: 3.5rem;
+        }
+
+        .step-card {
+            background: var(--navy-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            position: relative;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .step-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(26, 111, 232, 0.3);
+        }
+
+        .step-number {
+            font-family: 'Sora', sans-serif;
+            font-size: 3rem;
+            font-weight: 800;
+            color: rgba(26, 111, 232, 0.15);
+            line-height: 1;
+            margin-bottom: 1rem;
+        }
+
+        .step-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(26, 111, 232, 0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .step-card h3 {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+        }
+
+        .step-card p {
+            color: var(--grey);
+            font-size: 0.92rem;
+            line-height: 1.65;
+        }
+
+        .step-time {
+            display: inline-block;
+            margin-top: 1rem;
+            background: rgba(0, 196, 140, 0.1);
+            color: var(--green);
+            border: 1px solid rgba(0, 196, 140, 0.2);
+            padding: 0.2rem 0.7rem;
+            border-radius: 100px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        /* ── WHO IT'S FOR ── */
+        .audience-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+
+        .audience-card {
+            background: var(--navy-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .audience-card:hover {
+            border-color: rgba(26, 111, 232, 0.4);
+            transform: translateY(-3px);
+            background: rgba(26, 111, 232, 0.05);
+        }
+
+        .audience-tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .tag-business {
+            background: rgba(255, 176, 32, 0.15);
+            color: var(--amber);
+        }
+
+        .tag-technical {
+            background: rgba(0, 212, 255, 0.12);
+            color: var(--cyan);
+        }
+
+        .audience-card h3 {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .audience-card p {
+            color: var(--grey);
+            font-size: 0.92rem;
+            line-height: 1.65;
+            margin-bottom: 1.25rem;
+        }
+
+        .audience-features {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .audience-features li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.88rem;
+            color: var(--grey);
+        }
+
+        .audience-features li::before {
+            content: '✓';
+            color: var(--green);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .audience-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 1.5rem;
+            color: var(--blue-light);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* ── WHY CE MATTERS ── */
+        .why-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+            margin-top: 3rem;
+        }
+
+        .why-card {
+            background: var(--navy-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .why-card .icon {
+            font-size: 1.8rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .why-card h4 {
+            font-family: 'Sora', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .why-card p {
+            color: var(--grey);
+            font-size: 0.88rem;
+            line-height: 1.6;
+        }
+
+        /* ── DANZELL ALERT ── */
+        .danzell-alert {
+            background: linear-gradient(135deg, rgba(255, 176, 32, 0.08), rgba(255, 77, 77, 0.06));
+            border: 1px solid rgba(255, 176, 32, 0.2);
+            border-radius: 16px;
+            padding: 2.5rem 3rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 2rem;
+            margin-top: 4rem;
+        }
+
+        .danzell-icon {
+            font-size: 2.5rem;
+            flex-shrink: 0;
+        }
+
+        .danzell-alert h3 {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--amber);
+            margin-bottom: 0.5rem;
+        }
+
+        .danzell-alert p {
+            color: var(--grey);
+            font-size: 0.95rem;
+            line-height: 1.65;
+        }
+
+        .danzell-alert strong {
+            color: var(--white);
+        }
+
+        /* ── CTA SECTION ── */
+        .cta-section {
+            text-align: center;
+            padding: 6rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-bg {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse 70% 70% at 50% 50%, rgba(26, 111, 232, 0.12) 0%, transparent 70%);
+        }
+
+        .cta-section h2 {
+            font-family: 'Sora', sans-serif;
+            font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .cta-section p {
+            color: var(--grey);
+            font-size: 1rem;
+            margin-bottom: 2.5rem;
+            position: relative;
+        }
+
+        .cta-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 2.5rem 4rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        footer p {
+            color: var(--grey);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--grey);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.2s;
+        }
+
+        footer a:hover {
+            color: var(--white);
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        /* ── MODAL ── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--navy-mid);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            max-width: 560px;
+            width: 100%;
+        }
+
+        .modal h2 {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal p {
+            color: var(--grey);
+            font-size: 0.92rem;
+            margin-bottom: 2rem;
+            line-height: 1.65;
+        }
+
+        .path-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .path-option {
+            background: var(--navy-card);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            text-align: center;
+        }
+
+        .path-option:hover {
+            border-color: var(--blue);
+        }
+
+        .path-option.selected {
+            border-color: var(--blue);
+            background: rgba(26, 111, 232, 0.08);
+        }
+
+        .path-option .path-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .path-option h3 {
+            font-family: 'Sora', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
+
+        .path-option p {
+            font-size: 0.8rem;
+            color: var(--grey);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: none;
+            border: none;
+            color: var(--grey);
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: var(--white);
+        }
+
+        .modal {
+            position: relative;
+        }
+
+        .invite-form {
+            display: none;
+            margin-top: 1rem;
+        }
+
+        .invite-form.active {
+            display: block;
+        }
+
+        .invite-form input {
+            width: 100%;
+            background: var(--navy);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--white);
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .invite-form input:focus {
+            border-color: var(--blue);
+        }
+
+        .invite-form input::placeholder {
+            color: var(--grey);
+        }
+
+        .btn-full {
+            width: 100%;
+            padding: 0.85rem;
+            background: var(--blue);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.2s;
+        }
+
+        .btn-full:hover {
+            background: var(--blue-light);
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem 1.5rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .steps,
+            .why-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .audience-grid,
+            .path-options {
+                grid-template-columns: 1fr;
+            }
+
+            .danzell-alert {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1.5rem;
+            }
+
+            footer {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-links {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAV -->
+    <nav>
+        <a href="/" class="nav-logo">☁ Cloud<span>Guardian</span></a>
+        <ul class="nav-links">
+            <li><a href="#how-it-works">How it works</a></li>
+            <li><a href="#who-its-for">Who it's for</a></li>
+            <li><a href="#why-ce">Why Cyber Essentials</a></li>
+            <li><a href="/dashboard" class="nav-cta">Go to Dashboard →</a></li>
+        </ul>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-grid"></div>
+        <div class="hero-content">
+            <div class="hero-badge">Built for UK Businesses · Updated for Danzell 2026</div>
+            <h1>Pass Your Cyber Essentials Audit<br><em>Without the Tech Headache.</em></h1>
+            <p class="hero-sub">
+                CloudGuardian automatically checks your cloud setup against the UK Government's
+                Cyber Essentials standard — and tells you exactly what to fix, in plain English.
+                No IT degree required.
+            </p>
+            <div class="hero-actions">
+                <a href="#" class="btn-primary" onclick="openModal(); return false;">
+                    🔍 Check My Compliance Now
+                </a>
+                <a href="#how-it-works" class="btn-secondary">
+                    See how it works →
+                </a>
+            </div>
+            <div class="hero-trust">
+                <span class="trust-item">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path
+                            d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" />
+                    </svg>
+                    No access keys stored
+                </span>
+                <span class="trust-item">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path
+                            d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" />
+                    </svg>
+                    Read-only access · Nothing changed in your account
+                </span>
+                <span class="trust-item">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path
+                            d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" />
+                    </svg>
+                    Mapped to IASME CE v3.3 Danzell
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROBLEM BANNER -->
+    <div class="problem-banner">
+        <h2>⚠ The April 2026 Danzell Update changes everything.</h2>
+        <p>Cloud services are now <strong>mandatory in scope</strong> for Cyber Essentials. A single misconfigured cloud
+            account is now an <strong>automatic failure</strong>. If you use AWS or Azure, you need to act now.</p>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <section id="how-it-works">
+        <p class="section-label">How it works</p>
+        <h2 class="section-title">From cloud confusion to<br>certification-ready in three steps.</h2>
+        <p class="section-sub">No jargon. No consultants. No waiting weeks for a report.</p>
+
+        <div class="steps">
+            <div class="step-card">
+                <div class="step-number">01</div>
+                <div class="step-icon">🔗</div>
+                <h3>Connect Your Cloud</h3>
+                <p>Click one button and follow a simple guided setup in your AWS or Azure account. CloudGuardian gets
+                    temporary, read-only access — it cannot make any changes to your systems.</p>
+                <span class="step-time">⏱ Under 2 minutes</span>
+            </div>
+            <div class="step-card">
+                <div class="step-number">02</div>
+                <div class="step-icon">🔍</div>
+                <h3>Automatic Scan</h3>
+                <p>CloudGuardian checks your cloud against all five Cyber Essentials controls and tells you exactly what
+                    passes, what fails, and — crucially — what to do about it.</p>
+                <span class="step-time">⏱ Results in seconds</span>
+            </div>
+            <div class="step-card">
+                <div class="step-number">03</div>
+                <div class="step-icon">📄</div>
+                <h3>Download Your Evidence Pack</h3>
+                <p>Get a professional PDF evidence pack formatted for direct submission to your Cyber Essentials
+                    assessor. Replace days of manual evidence gathering with one click.</p>
+                <span class="step-time">⏱ Instant download</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- WHO IT'S FOR -->
+    <section id="who-its-for" style="padding-top:0;">
+        <p class="section-label">Who it's for</p>
+        <h2 class="section-title">Built for business owners<br>and the IT teams who support them.</h2>
+
+        <div class="audience-grid">
+            <a href="#" class="audience-card" onclick="openModal('business'); return false;">
+                <span class="audience-tag tag-business">Business Owner</span>
+                <h3>I run the business</h3>
+                <p>You need Cyber Essentials to win contracts or get cyber insurance, but you're not an IT expert.
+                    CloudGuardian makes the process simple — and if you need technical help, you can invite your IT
+                    provider in one click.</p>
+                <ul class="audience-features">
+                    <li>Plain-English results — no tech jargon</li>
+                    <li>Invite your IT provider by email</li>
+                    <li>Assessor-ready evidence pack included</li>
+                    <li>Understand your risk in plain terms</li>
+                </ul>
+                <span class="audience-cta">Get started → </span>
+            </a>
+            <a href="#" class="audience-card" onclick="openModal('technical'); return false;">
+                <span class="audience-tag tag-technical">IT Professional / MSP</span>
+                <h3>I manage the IT</h3>
+                <p>You need a fast, reliable way to check compliance across client environments. CloudGuardian uses
+                    secure cross-account role access — no stored credentials, no security risk — and produces the
+                    evidence your clients need.</p>
+                <ul class="audience-features">
+                    <li>AWS & Azure scanning from one platform</li>
+                    <li>Role-based access — no credentials stored</li>
+                    <li>Five CE controls covered end-to-end</li>
+                    <li>Drift detection between scan cycles</li>
+                </ul>
+                <span class="audience-cta">Connect your first account →</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- WHY CE MATTERS -->
+    <section id="why-ce" style="padding-top:0;">
+        <p class="section-label">Why Cyber Essentials matters</p>
+        <h2 class="section-title">It's not just a certificate.<br>It's a business requirement.</h2>
+
+        <div class="why-grid">
+            <div class="why-card">
+                <div class="icon">🏛</div>
+                <h4>Government Contracts</h4>
+                <p>All UK public sector contracts handling personal data or sensitive information require Cyber
+                    Essentials. Without it, you cannot bid.</p>
+            </div>
+            <div class="why-card">
+                <div class="icon">🛡</div>
+                <h4>Cyber Insurance</h4>
+                <p>Most UK cyber insurers now require CE certification as a condition of cover. Failing to certify can
+                    invalidate your policy.</p>
+            </div>
+            <div class="why-card">
+                <div class="icon">🤝</div>
+                <h4>Supply Chain Access</h4>
+                <p>Large enterprise clients increasingly mandate CE for suppliers and partners. It's becoming a standard
+                    commercial requirement.</p>
+            </div>
+            <div class="why-card">
+                <div class="icon">⚖</div>
+                <h4>Legal Protection</h4>
+                <p>CE certification demonstrates due diligence. In the event of a breach, it shows your organisation
+                    took reasonable precautions.</p>
+            </div>
+            <div class="why-card">
+                <div class="icon">📈</div>
+                <h4>23% Annual Growth</h4>
+                <p>Cyber Essentials certifications grew 23% year-on-year. The market — and the mandate — is expanding
+                    rapidly.</p>
+            </div>
+            <div class="why-card">
+                <div class="icon">⏰</div>
+                <h4>Annual Renewal</h4>
+                <p>Certification must be renewed every year. CloudGuardian monitors continuously so you're always ready
+                    — not scrambling at renewal time.</p>
+            </div>
+        </div>
+
+        <div class="danzell-alert">
+            <div class="danzell-icon">⚡</div>
+            <div>
+                <h3>April 2026 Danzell Update — New Rules in Force Now</h3>
+                <p>The latest Cyber Essentials update (<strong>Requirements v3.3, 'Danzell'</strong>) made cloud
+                    services explicitly mandatory in scope. Any organisation using AWS, Azure, or Google Cloud
+                    <strong>cannot exclude these services from assessment</strong>. Multi-factor authentication on cloud
+                    accounts is now an <strong>automatic-fail criterion</strong>. CloudGuardian is fully updated for
+                    Danzell — most tools are not.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <div class="cta-section">
+        <div class="cta-bg"></div>
+        <h2>Ready to find out where you stand?</h2>
+        <p>Get your Cyber Essentials compliance score in under five minutes — free.</p>
+        <div class="cta-actions">
+            <a href="#" class="btn-primary" onclick="openModal(); return false;">
+                🔍 Check My Compliance Now
+            </a>
+            <a href="/dashboard" class="btn-secondary">
+                Go to Dashboard →
+            </a>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <p>© 2026 CloudGuardian · OputGuard Technologies Ltd · Built for UK SMEs</p>
+        <div class="footer-links">
+            <a href="/dashboard">Dashboard</a>
+            <a href="https://www.ncsc.gov.uk/cyberessentials/overview" target="_blank">About Cyber Essentials</a>
+            <a href="https://www.iasme.co.uk" target="_blank">IASME</a>
+        </div>
+    </footer>
+
+    <!-- ONBOARDING PATH MODAL -->
+    <div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <h2>How would you like to get started?</h2>
+            <p>Choose the path that suits you best. You can always switch later.</p>
+
+            <div class="path-options">
+                <a href="#" class="path-option" id="path-business" onclick="selectPath('business'); return false;">
+                    <div class="path-icon">🏢</div>
+                    <h3>I'm a Business Owner</h3>
+                    <p>I want to check compliance or invite my IT provider to do it for me</p>
+                </a>
+                <a href="/dashboard" class="path-option" id="path-technical">
+                    <div class="path-icon">⚙️</div>
+                    <h3>I'm an IT Professional</h3>
+                    <p>I manage cloud accounts and want to connect directly</p>
+                </a>
+            </div>
+
+            <!-- Business owner sub-options -->
+            <div id="business-options" style="display:none;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+                    <a href="/dashboard"
+                        style="display:block;background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:center;text-decoration:none;color:inherit;transition:border-color 0.2s;"
+                        onmouseover="this.style.borderColor='var(--blue)'"
+                        onmouseout="this.style.borderColor='var(--border)'">
+                        <div style="font-size:1.6rem;margin-bottom:0.5rem;">🔍</div>
+                        <div
+                            style="font-family:'Sora',sans-serif;font-size:0.88rem;font-weight:700;margin-bottom:0.25rem;">
+                            Check Myself</div>
+                        <div style="font-size:0.78rem;color:var(--grey);">I manage my own cloud account</div>
+                    </a>
+                    <a href="#" onclick="showInviteForm(); return false;"
+                        style="display:block;background:var(--navy-card);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:center;text-decoration:none;color:inherit;transition:border-color 0.2s;"
+                        onmouseover="this.style.borderColor='var(--blue)'"
+                        onmouseout="this.style.borderColor='var(--border)'">
+                        <div style="font-size:1.6rem;margin-bottom:0.5rem;">📧</div>
+                        <div
+                            style="font-family:'Sora',sans-serif;font-size:0.88rem;font-weight:700;margin-bottom:0.25rem;">
+                            Invite My IT Provider</div>
+                        <div style="font-size:0.78rem;color:var(--grey);">Send them a link to connect</div>
+                    </a>
+                </div>
+
+                <!-- Invite form -->
+                <div class="invite-form" id="invite-form">
+                    <input type="email" id="invite-email" placeholder="Your IT provider's email address">
+                    <input type="text" id="invite-name" placeholder="Your business name (optional)">
+                    <button class="btn-full" onclick="sendInvite()">📧 Send Invite Link</button>
+                    <p id="invite-result" style="text-align:center;margin-top:0.75rem;font-size:0.85rem;display:none;">
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openModal(path) {
+        document.getElementById('modal').classList.add('active');
+        if (path === 'business') selectPath('business');
+        if (path === 'technical') {
+            document.getElementById('path-technical').click();
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('modal').classList.remove('active');
+        document.getElementById('business-options').style.display = 'none';
+        document.getElementById('invite-form').classList.remove('active');
+    }
+
+    function closeModalOutside(e) {
+        if (e.target === document.getElementById('modal')) closeModal();
+    }
+
+    function selectPath(path) {
+        document.querySelectorAll('.path-option').forEach(el => el.classList.remove('selected'));
+        document.getElementById('path-' + path).classList.add('selected');
+        if (path === 'business') {
+            document.getElementById('business-options').style.display = 'grid';
+        }
+    }
+
+    function showInviteForm() {
+        document.getElementById('invite-form').classList.add('active');
+        document.getElementById('invite-email').focus();
+    }
+
+    function sendInvite() {
+        const email = document.getElementById('invite-email').value.trim();
+        const name  = document.getElementById('invite-name').value.trim();
+        const result = document.getElementById('invite-result');
+
+        if (!email || !email.includes('@')) {
+            result.style.display = 'block';
+            result.style.color   = 'var(--red)';
+            result.textContent   = 'Please enter a valid email address.';
+            return;
+        }
+
+        fetch('/invite/it-provider', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, business_name: name })
+        })
+        .then(r => r.json())
+        .then(data => {
+            result.style.display = 'block';
+            if (data.success) {
+                result.style.color = 'var(--green)';
+                result.textContent = '✓ Invite sent. Your IT provider will receive a link to connect your account.';
+            } else {
+                result.style.color = 'var(--red)';
+                result.textContent = 'Something went wrong. Please try again.';
+            }
+        })
+        .catch(() => {
+            result.style.display = 'block';
+            result.style.color   = 'var(--red)';
+            result.textContent   = 'Could not send invite. Please try again.';
+        });
+    }
+    </script>
+</body>
+
+</html>
