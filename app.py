@@ -522,16 +522,6 @@ def verify_aws():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
-
-@app.route("/invite/it-provider", methods=["POST"])
-def invite_it_provider():
-    data          = request.get_json(silent=True) or {}
-    email         = data.get("email",         "").strip()
-    business_name = data.get("business_name", "").strip()
-
-    if not email or "@" not in email:
-        return jsonify({"success": False, "error": "Invalid email"}), 400
-
     print(f"[INVITE] IT provider invite: {email} for business: {business_name or 'unknown'}")
     return jsonify({"success": True})
 
