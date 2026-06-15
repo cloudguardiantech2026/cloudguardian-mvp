@@ -678,68 +678,78 @@
             <div class="card">
                 <h2>Azure Connection</h2>
                 <p style="color:#8b949e;font-size:0.9rem;">
-                    Connect your Azure subscription in two steps. No terminal or client secrets required —
-                    CloudGuardian creates a read-only App Registration in your Entra ID tenant.
+                    Connect your Azure subscription securely in one click. CloudGuardian uses
+                    Microsoft's official OAuth2 consent flow — no credentials to paste, no scripts to run.
                 </p>
 
-                <!-- Step 1 — Deploy to Azure -->
-                <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;">
-                    <div
-                        style="background:#1F3D6B;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.85rem;flex-shrink:0;">
-                        1</div>
-                    <div>
-                        <p style="color:#e6edf3;font-size:0.9rem;margin:0 0 0.75rem;">
-                            Click below to open your Azure portal with the CloudGuardian deployment
-                            pre-configured. Review it, then click <strong>Deploy</strong>.
-                            Takes under two minutes.
-                        </p>
-                        <a href="/connect/azure" class="btn" style="text-decoration:none;background:#0078d4;">
-                            &#x1F537; Deploy CloudGuardian in Azure Portal
-                        </a>
-                        <p style="color:#8b949e;font-size:0.8rem;margin-top:0.6rem;">
-                            Creates a read-only App Registration and assigns the Reader role
-                            to your subscription. No client secret stored by CloudGuardian.
-                        </p>
-                    </div>
+                {% if azure_connected %}
+                <!-- Connected state -->
+                <div
+                    style="background:#0d2818;border:1px solid #3fb950;border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
+                    <p style="color:#3fb950;font-weight:700;margin:0 0 0.4rem;">&#x2705; Azure Account Connected</p>
+                    <p style="color:#8b949e;font-size:0.85rem;margin:0 0 0.25rem;">
+                        Tenant ID: <code style="color:#e3b341;">{{ azure_tenant_id }}</code>
+                    </p>
+                    {% if azure_subscription_id %}
+                    <p style="color:#8b949e;font-size:0.85rem;margin:0 0 0.75rem;">
+                        Subscription: <code style="color:#e3b341;">{{ azure_subscription_id }}</code>
+                    </p>
+                    {% endif %}
+                    {% if azure_subscriptions and azure_subscriptions|length > 1 %}
+                    <label style="font-size:0.85rem;">Switch Subscription</label>
+                    <select id="az-subscription-select" onchange="switchAzureSubscription(this.value)" style="width:100%;background:#0a1628;border:1px solid #30363d;border-radius:6px;
+                           padding:0.6rem 0.75rem;color:#e6edf3;font-size:0.9rem;margin-top:0.4rem;">
+                        {% for sub in azure_subscriptions %}
+                        <option value="{{ sub.id }}" {% if sub.id==azure_subscription_id %}selected{% endif %}>
+                            {{ sub.name }} ({{ sub.id }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% endif %}
+                    <a href="/connect/azure/disconnect" style="display:inline-block;margin-top:0.75rem;
+                   color:#8b949e;font-size:0.82rem;text-decoration:underline;">Disconnect Azure account</a>
                 </div>
 
-                <!-- Step 2 — Paste outputs -->
-                <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;">
-                    <div
-                        style="background:#1F3D6B;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.85rem;flex-shrink:0;">
-                        2</div>
-                    <div style="width:100%;">
-                        <p style="color:#e6edf3;font-size:0.9rem;margin:0 0 0.75rem;">
-                            Once deployed, copy the <code style="color:#e3b341;">clientId</code> and
-                            <code style="color:#e3b341;">tenantId</code> from the deployment Outputs
-                            and paste them below.
-                        </p>
-                        <label>Tenant ID</label>
-                        <input type="text" id="az-tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
-                        <br><br>
-                        <label>Client ID</label>
-                        <input type="text" id="az-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
-                        <br><br>
-                        <label>Client Secret</label>
-                        <p style="color:#8b949e;font-size:0.83rem;margin:4px 0 6px;">
-                            Temporarily required for this release. Will be removed when Workload
-                            Identity Federation is enabled in the next release.
-                        </p>
-                        <input type="password" id="az-client-secret" placeholder="Enter client secret">
-                        <br><br>
-                        <label>Subscription ID</label>
-                        <input type="text" id="az-subscription-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Run Azure Scan -->
-            <div class="card">
+                <!-- Run Scan button shown when connected -->
                 <button class="btn btn-scan" onclick="runAzureScan()">&#x1F50D; Run Azure Compliance Scan</button>
                 <div class="azure-scanning" id="azure-scanning">&#x23F3; Scanning your Azure environment — this may take
                     30–60 seconds...</div>
                 <div id="azure-error" style="display:none;margin-top:1rem;" class="error-card"></div>
+
+                {% else %}
+                <!-- Not connected state -->
+                <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;">
+                    <div style="background:#1F3D6B;color:#fff;border-radius:50%;width:28px;height:28px;
+                            display:flex;align-items:center;justify-content:center;font-weight:bold;
+                            font-size:0.85rem;flex-shrink:0;">1</div>
+                    <div>
+                        <p style="color:#e6edf3;font-size:0.9rem;margin:0 0 0.75rem;">
+                            Click below to sign in to Microsoft and grant CloudGuardian read-only
+                            access to your Azure subscription. You will see exactly what permissions
+                            are requested before clicking Accept.
+                        </p>
+                        <a href="/connect/azure" class="btn" style="text-decoration:none;background:#0078d4;">
+                            &#x1F537; Connect Azure Account
+                        </a>
+                        <p style="color:#8b949e;font-size:0.8rem;margin-top:0.6rem;">
+                            Read-only access only. No credentials stored by CloudGuardian.
+                            You can disconnect at any time.
+                        </p>
+                    </div>
+                </div>
+
+                <div id="azure-error" style="display:none;margin-top:1rem;" class="error-card"></div>
+                {% endif %}
             </div>
+
+            <!-- Run Azure Scan (shown only when not connected — hidden duplicate removed) -->
+            {% if not azure_connected %}
+            <div class="card" style="opacity:0.5;pointer-events:none;">
+                <button class="btn btn-scan" disabled>&#x1F50D; Run Azure Compliance Scan</button>
+                <p style="color:#8b949e;font-size:0.85rem;margin-top:0.75rem;">Connect your Azure account above to
+                    enable scanning.</p>
+            </div>
+            {% endif %}
 
             <!-- Azure Score + Risk -->
             <div id="azure-score-section" style="display:none;">
@@ -891,19 +901,8 @@
 
         // ── Azure scan ─────────────────────────────────────────────────────────────
         async function runAzureScan() {
-            const tenantId = document.getElementById('az-tenant-id').value.trim();
-            const clientId = document.getElementById('az-client-id').value.trim();
-            const clientSecret = document.getElementById('az-client-secret').value.trim();
-            const subscriptionId = document.getElementById('az-subscription-id').value.trim();
-
             const errBox = document.getElementById('azure-error');
             errBox.style.display = 'none';
-
-            if (!tenantId || !clientId || !clientSecret || !subscriptionId) {
-                errBox.textContent = 'Please fill in all four Azure credential fields before scanning.';
-                errBox.style.display = 'block';
-                return;
-            }
 
             document.getElementById('azure-scanning').style.display = 'block';
             document.getElementById('azure-results-section').style.display = 'none';
@@ -915,10 +914,7 @@
                 const res = await fetch('/scan/azure', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        tenant_id: tenantId, client_id: clientId,
-                        client_secret: clientSecret, subscription_id: subscriptionId,
-                    })
+                    body: JSON.stringify({})
                 });
                 const data = await res.json();
                 document.getElementById('azure-scanning').style.display = 'none';
@@ -1004,8 +1000,22 @@
             }
         }
 
-        // Allow Enter key in Azure ask input
+        async function switchAzureSubscription(subscriptionId) {
+            try {
+                await fetch('/scan/azure', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subscription_id: subscriptionId })
+                });
+            } catch (e) { }
+        }
+
+        // Auto-switch to Azure tab if redirected back from OAuth callback
         document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('tab') === 'azure' || params.get('azure_connected') === '1') {
+                switchProvider('azure');
+            }
             const qi = document.getElementById('azure-query');
             if (qi) qi.addEventListener('keydown', e => { if (e.key === 'Enter') askAzure(); });
         });
