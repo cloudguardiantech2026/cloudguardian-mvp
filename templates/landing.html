@@ -880,7 +880,8 @@
                 </a>
             </div>
             <p style="color:var(--grey);font-size:0.8rem;margin-top:0.75rem;">
-                No credit card required. Connects via temporary, read-only session. Nothing changed in your account.
+                No credit card required. Zero credentials stored. Connects using native AWS IAM Roles and Azure Service
+                Principals — nothing changed in your account.
             </p>
             <div class="hero-trust">
                 <span class="trust-item">
@@ -911,8 +912,9 @@
     <!-- PROBLEM BANNER -->
     <div class="problem-banner">
         <h2>⚠ The April 2026 Danzell Update changes everything.</h2>
-        <p>Cloud services are now <strong>mandatory in scope</strong> for Cyber Essentials. A single misconfigured cloud
-            account is now an <strong>automatic failure</strong>. If you use AWS or Azure, you need to act now.</p>
+        <p>Cloud services are now <strong>mandatory in scope</strong> for Cyber Essentials. Missing MFA on any cloud
+            account is now an <strong>automatic failure with no appeal</strong>. If you use AWS or Azure, you need to
+            act now.</p>
     </div>
 
     <!-- HOW IT WORKS -->
@@ -926,8 +928,9 @@
                 <div class="step-number">01</div>
                 <div class="step-icon">🔗</div>
                 <h3>Connect Your Cloud</h3>
-                <p>Click one button and follow a simple guided setup in your AWS or Azure account. CloudGuardian gets
-                    temporary, read-only access — it cannot make any changes to your systems.</p>
+                <p>Deploy our secure, read-only IAM configuration using a 1-click CloudFormation launch (AWS) or
+                    Microsoft OAuth consent (Azure). No passwords, no access keys, no scripts. CloudGuardian cannot make
+                    any changes to your systems.</p>
                 <span class="step-time">⏱ Under 2 minutes</span>
             </div>
             <div class="step-card">
@@ -978,6 +981,7 @@
                 <ul class="audience-features">
                     <li>AWS & Azure scanning from one platform</li>
                     <li>Role-based access — no credentials stored</li>
+                    <li>Multi-tenant compliance dashboard — manage all client accounts from one UI</li>
                     <li>Five CE controls covered end-to-end</li>
                     <li>Drift detection between scan cycles</li>
                 </ul>
@@ -1036,9 +1040,12 @@
                 <h3>April 2026 Danzell Update — New Rules in Force Now</h3>
                 <p>The latest Cyber Essentials update (<strong>Requirements v3.3, 'Danzell'</strong>) made cloud
                     services explicitly mandatory in scope. Any organisation using AWS, Azure, or Google Cloud
-                    <strong>cannot exclude these services from assessment</strong>. Multi-factor authentication on cloud
-                    accounts is now an <strong>automatic-fail criterion</strong>. CloudGuardian is fully updated for
-                    Danzell — most tools are not.</p>
+                    <strong>cannot exclude these services from assessment</strong>.</p>
+                <p style="margin-top:0.75rem;">Two new automatic-fail criteria now apply: <strong>MFA disabled on any
+                        cloud administrator or user account</strong> results in immediate certification failure with no
+                    second chance. And Danzell's new <strong>14-day critical patching rule</strong> (Questions
+                    A6.4/A6.5) means unpatched high-severity vulnerabilities older than 14 days are a blocking finding.
+                    CloudGuardian monitors both continuously — most tools are not updated for Danzell.</p>
             </div>
         </div>
     </section>
