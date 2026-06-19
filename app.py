@@ -41,12 +41,7 @@ SCAN_CACHE_PATH = "backend/state/scan_cache.json"
 AZURE_CLIENT_ID     = os.environ.get("AZURE_CLIENT_ID", "")
 AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", "")
 AZURE_REDIRECT_URI  = "https://cloudguardian-mvp.onrender.com/connect/azure/callback"
-AZURE_SCOPES        = " ".join([
-    "https://management.azure.com/user_impersonation",
-    "https://graph.microsoft.com/Directory.Read.All",
-    "https://graph.microsoft.com/User.Read.All",
-    "offline_access",
-])
+AZURE_SCOPES        = "https://management.azure.com/user_impersonation offline_access openid profile"
 
 CF_TEMPLATE_URL      = "https://cloudguardian-templates.s3.eu-west-2.amazonaws.com/cloudguardian_aws.yaml"
 CF_QUICK_CREATE_BASE = "https://console.aws.amazon.com/cloudformation/home#/stacks/create/review"
