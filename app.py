@@ -95,26 +95,59 @@ def merge_scan_output(scan_output, signals, resources_map):
             resources_map[key] = []
         resources_map[key].extend(value)
 
+# ── Replace calculate_azure_score() in app.py with this version ───────────────
+# BUG FIXED: ERROR status (scanner crashed) was silently excluded from the
+# failed/warned counts, so a scan where all 5 scanners errored still produced
+# "LOW risk / READY" — a dangerously misleading result.
+# ERROR is now treated as a blocking issue, same severity tier as FAIL.
+
 def calculate_azure_score(azure_results):
     total = len(azure_results)
     if total == 0:
         return {"score": 0, "risk_level": "UNKNOWN", "auto_fail_triggered": False,
                 "certification_status": "No Azure results — run a scan first"}
-    passed    = sum(1 for r in azure_results if r.get("status") == "PASS")
-    failed    = sum(1 for r in azure_results if r.get("status") == "FAIL")
-    warned    = sum(1 for r in azure_results if r.get("status") == "WARN")
-    score     = round((passed / total) * 100, 2)
-    auto_fail = any(r.get("status") == "FAIL" and "CE3" in r.get("control", "") for r in azure_results)
-    if auto_fail:
-        risk_level, cert_status = "HIGH", "CERTIFICATION BLOCKED — MFA auto-fail condition present"
+
+    passed  = sum(1 for r in azure_results if r.get("status") == "PASS")
+    failed  = sum(1 for r in azure_results if r.get("status") == "FAIL")
+    warned  = sum(1 for r in azure_results if r.get("status") == "WARN")
+    errored = sum(1 for r in azure_results if r.get("status") == "ERROR")
+
+    # Score only counts confirmed passes — errors and failures both reduce it
+    score = round((passed / total) * 100, 2)
+
+    auto_fail = any(
+        r.get("status") == "FAIL" and "CE3" in r.get("control", "")
+        for r in azure_results
+    )
+
+    if errored > 0:
+        # Scanner errors mean we could NOT verify compliance — never report
+        # this as low risk. Treat as the highest-priority blocking state.
+        risk_level  = "HIGH"
+        cert_status = (
+            f"SCAN INCOMPLETE — {errored} control(s) could not be checked "
+            f"due to a connection or configuration error. Compliance status unknown."
+        )
+    elif auto_fail:
+        risk_level  = "HIGH"
+        cert_status = "CERTIFICATION BLOCKED — MFA auto-fail condition present"
     elif failed > 0:
-        risk_level, cert_status = "HIGH", "NOT READY — failing controls present"
+        risk_level  = "HIGH"
+        cert_status = "NOT READY — failing controls present"
     elif warned > 0:
-        risk_level, cert_status = "MEDIUM", "NEEDS IMPROVEMENT — warnings present"
+        risk_level  = "MEDIUM"
+        cert_status = "NEEDS IMPROVEMENT — warnings present"
     else:
-        risk_level, cert_status = "LOW", "READY — no blocking issues detected"
-    return {"score": score, "risk_level": risk_level, "auto_fail_triggered": auto_fail,
-            "certification_status": cert_status}
+        risk_level  = "LOW"
+        cert_status = "READY — no blocking issues detected"
+
+    return {
+        "score":                score,
+        "risk_level":           risk_level,
+        "auto_fail_triggered":  auto_fail,
+        "certification_status": cert_status,
+        "scan_errors":          errored,
+    }
 
 def azure_results_for_llm(azure_results):
     out = {}
