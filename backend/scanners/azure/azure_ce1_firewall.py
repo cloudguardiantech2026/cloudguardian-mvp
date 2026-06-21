@@ -7,21 +7,43 @@ def scan(credential=None, subscription_id=None):
     client = NetworkManagementClient(credential, subscription_id)
     findings = []
 
-    for nsg in client.network_security_groups.list_all():
-        issues = []
-        for rule in (nsg.security_rules or []):
-            if (rule.access == "Allow"
-                    and rule.direction == "Inbound"
-                    and rule.source_address_prefix in ("*", "Internet", "0.0.0.0/0")
-                    and rule.destination_port_range in ("*", "0-65535")):
-                issues.append(f"Rule '{rule.name}' allows all inbound traffic")
+    try:
+        for nsg in client.network_security_groups.list_all():
+            issues = []
+            for rule in (nsg.security_rules or []):
+                if (rule.access == "Allow"
+                        and rule.direction == "Inbound"
+                        and rule.source_address_prefix in ("*", "Internet", "0.0.0.0/0")
+                        and rule.destination_port_range in ("*", "0-65535")):
+                    issues.append(f"Rule '{rule.name}' allows all inbound traffic")
 
+            findings.append({
+                "provider": "azure",
+                "control": "CE1 – Boundary Firewalls",
+                "resource": nsg.name,
+                "status": "FAIL" if issues else "PASS",
+                "detail": "; ".join(issues) if issues else "No overly permissive inbound rules found"
+            })
+    except Exception as e:
         findings.append({
             "provider": "azure",
             "control": "CE1 – Boundary Firewalls",
-            "resource": nsg.name,
-            "status": "FAIL" if issues else "PASS",
-            "detail": "; ".join(issues) if issues else "No overly permissive inbound rules found"
+            "resource": "scanner",
+            "status": "ERROR",
+            "detail": str(e)
+        })
+
+    if not findings:
+        findings.append({
+            "provider": "azure",
+            "control": "CE1 – Boundary Firewalls",
+            "resource": "subscription",
+            "status": "INFO",
+            "detail": (
+                "No network security groups found in this subscription. "
+                "This control cannot be fully assessed until network resources exist — "
+                "create an NSG or deploy a VM to enable boundary firewall checks."
+            )
         })
 
     return findings

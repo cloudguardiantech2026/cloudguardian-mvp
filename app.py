@@ -101,19 +101,27 @@ def merge_scan_output(scan_output, signals, resources_map):
 # "LOW risk / READY" — a dangerously misleading result.
 # ERROR is now treated as a blocking issue, same severity tier as FAIL.
 
+# ── Replace calculate_azure_score() in app.py with this version ───────────────
+# Adds handling for INFO status (no resources to assess) — these are excluded
+# from the score calculation entirely since they represent "nothing to check"
+# rather than a pass or fail. The certification_status message tells the user
+# how many controls had no resources, so this is transparent rather than hidden.
+
 def calculate_azure_score(azure_results):
     total = len(azure_results)
     if total == 0:
         return {"score": 0, "risk_level": "UNKNOWN", "auto_fail_triggered": False,
                 "certification_status": "No Azure results — run a scan first"}
 
-    passed  = sum(1 for r in azure_results if r.get("status") == "PASS")
-    failed  = sum(1 for r in azure_results if r.get("status") == "FAIL")
-    warned  = sum(1 for r in azure_results if r.get("status") == "WARN")
-    errored = sum(1 for r in azure_results if r.get("status") == "ERROR")
+    passed   = sum(1 for r in azure_results if r.get("status") == "PASS")
+    failed   = sum(1 for r in azure_results if r.get("status") == "FAIL")
+    warned   = sum(1 for r in azure_results if r.get("status") == "WARN")
+    errored  = sum(1 for r in azure_results if r.get("status") == "ERROR")
+    info     = sum(1 for r in azure_results if r.get("status") == "INFO")
 
-    # Score only counts confirmed passes — errors and failures both reduce it
-    score = round((passed / total) * 100, 2)
+    # Score is based only on controls that could actually be assessed
+    assessable = total - info
+    score = round((passed / assessable) * 100, 2) if assessable > 0 else 0
 
     auto_fail = any(
         r.get("status") == "FAIL" and "CE3" in r.get("control", "")
@@ -121,12 +129,10 @@ def calculate_azure_score(azure_results):
     )
 
     if errored > 0:
-        # Scanner errors mean we could NOT verify compliance — never report
-        # this as low risk. Treat as the highest-priority blocking state.
         risk_level  = "HIGH"
         cert_status = (
             f"SCAN INCOMPLETE — {errored} control(s) could not be checked "
-            f"due to a connection or configuration error. Compliance status unknown."
+            f"due to a connection or permissions error. Compliance status unknown."
         )
     elif auto_fail:
         risk_level  = "HIGH"
@@ -137,6 +143,12 @@ def calculate_azure_score(azure_results):
     elif warned > 0:
         risk_level  = "MEDIUM"
         cert_status = "NEEDS IMPROVEMENT — warnings present"
+    elif info > 0:
+        risk_level  = "MEDIUM"
+        cert_status = (
+            f"PARTIALLY ASSESSED — {info} control(s) had no resources to check yet. "
+            f"Deploy cloud resources and re-scan for a complete assessment."
+        )
     else:
         risk_level  = "LOW"
         cert_status = "READY — no blocking issues detected"
@@ -147,8 +159,8 @@ def calculate_azure_score(azure_results):
         "auto_fail_triggered":  auto_fail,
         "certification_status": cert_status,
         "scan_errors":          errored,
+        "scan_info":            info,
     }
-
 def azure_results_for_llm(azure_results):
     out = {}
     for i, r in enumerate(azure_results):
