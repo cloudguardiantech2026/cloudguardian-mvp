@@ -5,6 +5,49 @@ import secrets
 import markdown
 import requests
 
+# ── Add this helper near the top of app.py, after the imports ─────────────────
+# Wraps each Azure scanner call with a hard timeout so a single unresponsive
+# Azure API endpoint cannot hang the entire Gunicorn worker and crash the scan.
+# This is what caused the WORKER TIMEOUT on azure_ce4_malware.py — the
+# Security Center API call had no timeout and hung indefinitely.
+ 
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+ 
+SCANNER_TIMEOUT_SECONDS = 20  # generous but bounded — prevents indefinite hangs
+ 
+ 
+def run_scanner_with_timeout(scanner_func, control_name: str, resource_name: str = "scanner"):
+    """
+    Runs a single Azure scanner function with a hard timeout.
+    If the scanner hangs (e.g. a slow/unresponsive Azure API call),
+    this returns an ERROR finding instead of letting the worker hang
+    until Gunicorn forcibly kills the whole process.
+    """
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(scanner_func)
+        try:
+            return future.result(timeout=SCANNER_TIMEOUT_SECONDS)
+        except FutureTimeoutError:
+            return [{
+                "provider": "azure",
+                "control":  control_name,
+                "resource": resource_name,
+                "status":   "ERROR",
+                "detail": (
+                    f"This control timed out after {SCANNER_TIMEOUT_SECONDS} seconds. "
+                    f"The Azure API did not respond in time. This is usually temporary — "
+                    f"please try running the scan again."
+                ),
+            }]
+        except Exception as e:
+            return [{
+                "provider": "azure",
+                "control":  control_name,
+                "resource": resource_name,
+                "status":   "ERROR",
+                "detail":   str(e),
+            }]
+
 from flask import Flask, render_template, request, send_file, send_from_directory, session, jsonify, Response, redirect
 from urllib.parse import urlencode, quote
 from botocore.exceptions import ClientError
@@ -199,18 +242,28 @@ def run_azure_scan(tenant_id: str, subscription_id: str):
     """
     Runs Azure CE scanners using CloudGuardian platform credentials
     scoped to the customer tenant via OAuth consent.
+ 
+    Each scanner now runs with a hard timeout — a single slow Azure API
+    endpoint can no longer hang the entire scan or crash the worker process.
     """
     os.environ["AZURE_TENANT_ID"]       = tenant_id
     os.environ["AZURE_CLIENT_ID"]       = os.environ.get("AZURE_CLIENT_ID", "")
     os.environ["AZURE_CLIENT_SECRET"]   = os.environ.get("AZURE_CLIENT_SECRET", "")
     os.environ["AZURE_SUBSCRIPTION_ID"] = subscription_id
+ 
+    scanner_map = [
+        (azure_ce1, "CE1 – Boundary Firewalls"),
+        (azure_ce2, "CE2 – Secure Configuration"),
+        (azure_ce3, "CE3 – User Access Control"),
+        (azure_ce4, "CE4 – Malware Protection"),
+        (azure_ce5, "CE5 – Patch Management"),
+    ]
+ 
     results = []
-    for scanner in [azure_ce1, azure_ce2, azure_ce3, azure_ce4, azure_ce5]:
-        try:
-            results.extend(scanner())
-        except Exception as e:
-            results.append({"provider": "azure", "control": scanner.__name__,
-                            "resource": "scanner", "status": "ERROR", "detail": str(e)})
+    for scanner_fn, control_name in scanner_map:
+        scanner_results = run_scanner_with_timeout(scanner_fn, control_name)
+        results.extend(scanner_results)
+ 
     return results
 
 
