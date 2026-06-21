@@ -166,8 +166,31 @@ def update_azure_subscription(session_id: str, subscription_id: str) -> None:
         conn.commit()
 
 
+# ── Replace delete_azure_session() in backend/db/customer_db.py ───────────────
+# BUG: This function assumed the azure_sessions table already existed,
+# unlike save_azure_session() and get_azure_session() which both create it
+# defensively first. If disconnect is called before any save/get has run on
+# a fresh deploy, the table genuinely doesn't exist yet — crashing with
+# "no such table: azure_sessions" instead of just doing nothing gracefully.
+
 def delete_azure_session(session_id: str) -> None:
-    """Removes Azure OAuth session data — called on disconnect."""
+    """
+    Removes Azure OAuth session data — called on disconnect.
+    Creates the table first (no-op if it already exists) so this is safe
+    to call even if no Azure session has ever been saved yet.
+    """
     with _get_connection() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS azure_sessions (
+                session_id         TEXT PRIMARY KEY,
+                tenant_id           TEXT,
+                access_token        TEXT,
+                refresh_token       TEXT,
+                subscription_id     TEXT,
+                subscriptions_json  TEXT,
+                created_at          TEXT DEFAULT (datetime('now')),
+                updated_at          TEXT DEFAULT (datetime('now'))
+            )
+        """)
         conn.execute("DELETE FROM azure_sessions WHERE session_id = ?", (session_id,))
         conn.commit()

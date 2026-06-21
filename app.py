@@ -459,12 +459,19 @@ def connect_azure_status():
     })
 
 
+# ── Replace connect_azure_disconnect() in app.py with this version ────────────
+# Wraps the database delete in a try/except so a DB-layer issue can never
+# prevent the user from clearing their session and disconnecting cleanly.
+
 @app.route("/connect/azure/disconnect")
 def connect_azure_disconnect():
     """Clears Azure OAuth tokens from server-side storage and session cookie."""
     azure_session_id = session.get("azure_session_id", "")
     if azure_session_id:
-        delete_azure_session(azure_session_id)
+        try:
+            delete_azure_session(azure_session_id)
+        except Exception as e:
+            print(f"[WARN] delete_azure_session failed during disconnect: {e}")
 
     for key in ["azure_session_id", "azure_tenant_id", "azure_connected",
                 "azure_subscription_id", "azure_subscriptions", "azure_oauth_state"]:
