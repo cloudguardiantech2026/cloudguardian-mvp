@@ -391,7 +391,6 @@ def connect_azure_callback():
     # template reads them directly without an extra DB call on every page load
     session["azure_tenant_id"]       = tenant_id
     session["azure_subscription_id"] = subscription_id
-    session["azure_subscriptions"]   = subscriptions
 
     return redirect("/dashboard?tab=azure&azure_connected=1")
 
@@ -568,6 +567,17 @@ def index():
                 error = "Please run a compliance scan first before asking questions."
 
     current_role_arn = session.get("role_arn", "").strip()
+
+    # Read Azure subscriptions from server-side storage, not the cookie
+    azure_session_id    = session.get("azure_session_id", "")
+    azure_subscriptions = []
+    if azure_session_id:
+        azure_data = get_azure_session(azure_session_id)
+        if azure_data and azure_data.get("subscriptions_json"):
+            try:
+                azure_subscriptions = json.loads(azure_data["subscriptions_json"])
+            except Exception:
+                azure_subscriptions = []
     cache            = load_scan_cache(current_role_arn)
 
     return render_template(
@@ -582,7 +592,7 @@ def index():
         azure_connected=session.get("azure_connected", False),
         azure_tenant_id=session.get("azure_tenant_id", ""),
         azure_subscription_id=session.get("azure_subscription_id", ""),
-        azure_subscriptions=session.get("azure_subscriptions", []),
+        azure_subscriptions=azure_subscriptions,
     )
 
 
