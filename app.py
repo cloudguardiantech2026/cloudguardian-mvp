@@ -515,6 +515,24 @@ def scan_azure():
         return jsonify({"provider": "azure", "results": azure_results, "score_data": azure_score_data})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+
+@app.route("/ask/azure", methods=["POST"])
+def ask_azure():
+    data  = request.get_json(silent=True) or {}
+    query = data.get("query", "").strip()
+    if not query:
+        return jsonify({"error": "No query provided."}), 400
+    cache = load_azure_cache()
+    if not cache:
+        return jsonify({"error": "No Azure scan results found. Run an Azure scan first."}), 404
+    try:
+        response = handle_query(query, azure_results_for_llm(cache["azure_results"]),
+                                [], cache["azure_score_data"])
+        return jsonify({"response": markdown.markdown(response)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 
 # ── PDF downloads ──────────────────────────────────────────────────────────────
