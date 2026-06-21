@@ -89,3 +89,85 @@ def record_scan(external_id: str) -> None:
             (external_id,),
         )
         conn.commit()
+
+# ── Add these functions to backend/db/customer_db.py ──────────────────────────
+# These store Azure OAuth tokens server-side instead of in the browser cookie,
+# fixing the "session cookie too large" bug that silently breaks the OAuth flow.
+
+def save_azure_session(session_id: str, tenant_id: str, access_token: str,
+                       refresh_token: str, subscription_id: str = "",
+                       subscriptions_json: str = "") -> None:
+    """
+    Stores Azure OAuth tokens server-side, keyed by a short session_id
+    that IS safe to store in the browser cookie.
+    """
+    with _get_connection() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS azure_sessions (
+                session_id         TEXT PRIMARY KEY,
+                tenant_id           TEXT,
+                access_token        TEXT,
+                refresh_token       TEXT,
+                subscription_id     TEXT,
+                subscriptions_json  TEXT,
+                created_at          TEXT DEFAULT (datetime('now')),
+                updated_at          TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        conn.execute("""
+            INSERT INTO azure_sessions
+                (session_id, tenant_id, access_token, refresh_token,
+                 subscription_id, subscriptions_json, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+            ON CONFLICT(session_id) DO UPDATE SET
+                tenant_id          = excluded.tenant_id,
+                access_token       = excluded.access_token,
+                refresh_token      = excluded.refresh_token,
+                subscription_id    = excluded.subscription_id,
+                subscriptions_json = excluded.subscriptions_json,
+                updated_at         = datetime('now')
+        """, (session_id, tenant_id, access_token, refresh_token,
+              subscription_id, subscriptions_json))
+        conn.commit()
+
+
+def get_azure_session(session_id: str) -> dict | None:
+    """
+    Retrieves Azure OAuth session data by session_id.
+    Returns None if not found.
+    """
+    with _get_connection() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS azure_sessions (
+                session_id         TEXT PRIMARY KEY,
+                tenant_id           TEXT,
+                access_token        TEXT,
+                refresh_token       TEXT,
+                subscription_id     TEXT,
+                subscriptions_json  TEXT,
+                created_at          TEXT DEFAULT (datetime('now')),
+                updated_at          TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        row = conn.execute(
+            "SELECT * FROM azure_sessions WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def update_azure_subscription(session_id: str, subscription_id: str) -> None:
+    """Updates just the active subscription ID for a session (multi-sub switch)."""
+    with _get_connection() as conn:
+        conn.execute(
+            "UPDATE azure_sessions SET subscription_id = ?, updated_at = datetime('now') WHERE session_id = ?",
+            (subscription_id, session_id),
+        )
+        conn.commit()
+
+
+def delete_azure_session(session_id: str) -> None:
+    """Removes Azure OAuth session data — called on disconnect."""
+    with _get_connection() as conn:
+        conn.execute("DELETE FROM azure_sessions WHERE session_id = ?", (session_id,))
+        conn.commit()

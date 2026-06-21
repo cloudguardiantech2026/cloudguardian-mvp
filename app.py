@@ -23,6 +23,12 @@ from backend.scanners.azure.azure_ce3_access_control import scan as azure_ce3
 from backend.scanners.azure.azure_ce4_malware        import scan as azure_ce4
 from backend.scanners.azure.azure_ce5_patching       import scan as azure_ce5
 
+from backend.db.customer_db import (
+    generate_external_id, create_customer,
+    save_azure_session, get_azure_session,
+    update_azure_subscription, delete_azure_session,
+ )
+
 from backend.engine.framework_engine import (
     load_controls, evaluate_controls, calculate_compliance_score,
 )
@@ -213,6 +219,22 @@ def verify_aws():
 
 
 # ── Azure OAuth onboarding ─────────────────────────────────────────────────────
+# ── Replace the Azure OAuth section in app.py with this version ───────────────
+# Root cause fixed: Flask session cookie was exceeding the browser's 4093-byte
+# limit because Azure access_token + refresh_token were stored directly in the
+# cookie-based session. Browsers silently drop oversized cookies, so the OAuth
+# callback succeeded server-side but the customer's browser never received a
+# valid session — causing the "bounces back to connect screen" symptom.
+#
+# FIX: Store tokens server-side in SQLite (azure_sessions table), keyed by a
+# short random session_id. Only that small session_id goes in the cookie.
+
+# Add this import at the top of app.py:
+# from backend.db.customer_db import (
+#     generate_external_id, create_customer,
+#     save_azure_session, get_azure_session,
+#     update_azure_subscription, delete_azure_session,
+# )
 
 @app.route("/connect/azure")
 def connect_azure():
@@ -232,11 +254,16 @@ def connect_azure():
     }
     return redirect(f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?{urlencode(params)}")
 
+
 @app.route("/connect/azure/callback")
 def connect_azure_callback():
     """
     OAuth2 callback — exchanges auth code for tokens, extracts tenant ID,
     discovers subscriptions automatically.
+
+    Tokens are stored server-side (SQLite) — only a small session_id
+    reference is stored in the browser cookie. This keeps the cookie
+    well under the 4093-byte browser limit.
     """
     state = request.args.get("state", "")
     if state != session.get("azure_oauth_state", ""):
@@ -283,31 +310,50 @@ def connect_azure_callback():
     if not tenant_id:
         return redirect("/dashboard?azure_error=Could+not+determine+tenant+ID&tab=azure")
 
-    session["azure_tenant_id"]     = tenant_id
-    session["azure_access_token"]  = access_token
-    session["azure_refresh_token"] = refresh_token
-    session["azure_connected"]     = True
-
     # Auto-discover subscriptions
+    subscription_id = ""
+    subscriptions    = []
     try:
         subs = requests.get(
             "https://management.azure.com/subscriptions?api-version=2022-12-01",
             headers={"Authorization": f"Bearer {access_token}"},
             timeout=15,
         ).json().get("value", [])
-        session["azure_subscription_id"] = subs[0]["subscriptionId"] if subs else ""
-        session["azure_subscriptions"]   = [
-            {"id": s["subscriptionId"], "name": s.get("displayName", s["subscriptionId"])}
-            for s in subs
-        ]
+        if subs:
+            subscription_id = subs[0]["subscriptionId"]
+            subscriptions = [
+                {"id": s["subscriptionId"], "name": s.get("displayName", s["subscriptionId"])}
+                for s in subs
+            ]
     except Exception:
-        session["azure_subscription_id"] = ""
-        session["azure_subscriptions"]   = []
+        pass
+
+    # ── KEY FIX: store tokens server-side, put only a short ID in the cookie ──
+    azure_session_id = secrets.token_urlsafe(16)  # ~22 chars — tiny in the cookie
+    save_azure_session(
+        session_id=azure_session_id,
+        tenant_id=tenant_id,
+        access_token=access_token,
+        refresh_token=refresh_token,
+        subscription_id=subscription_id,
+        subscriptions_json=json.dumps(subscriptions),
+    )
+
+    # Only this small reference goes into the browser cookie
+    session["azure_session_id"] = azure_session_id
+    session["azure_connected"]  = True
+    # Keep tenant_id and subscription_id in cookie too — they're tiny and the
+    # template reads them directly without an extra DB call on every page load
+    session["azure_tenant_id"]       = tenant_id
+    session["azure_subscription_id"] = subscription_id
+    session["azure_subscriptions"]   = subscriptions
 
     return redirect("/dashboard?tab=azure&azure_connected=1")
 
+
 @app.route("/connect/azure/status")
 def connect_azure_status():
+    """Returns the current Azure connection status as JSON."""
     return jsonify({
         "connected":       session.get("azure_connected", False),
         "tenant_id":       session.get("azure_tenant_id", ""),
@@ -315,29 +361,53 @@ def connect_azure_status():
         "subscriptions":   session.get("azure_subscriptions", []),
     })
 
+
 @app.route("/connect/azure/disconnect")
 def connect_azure_disconnect():
-    for key in ["azure_tenant_id", "azure_access_token", "azure_refresh_token",
-                "azure_connected", "azure_subscription_id", "azure_subscriptions",
-                "azure_oauth_state"]:
+    """Clears Azure OAuth tokens from server-side storage and session cookie."""
+    azure_session_id = session.get("azure_session_id", "")
+    if azure_session_id:
+        delete_azure_session(azure_session_id)
+
+    for key in ["azure_session_id", "azure_tenant_id", "azure_connected",
+                "azure_subscription_id", "azure_subscriptions", "azure_oauth_state"]:
         session.pop(key, None)
     return redirect("/dashboard?tab=azure")
 
 
 # ── Scan routes ────────────────────────────────────────────────────────────────
+# ── Replace the /scan/azure route in app.py with this version ─────────────────
+# Retrieves the access token from server-side storage (azure_sessions table)
+# using the small session_id stored in the cookie, instead of expecting the
+# full token to be in the cookie (which caused the oversized-cookie bug).
 
 @app.route("/scan/azure", methods=["POST"])
 def scan_azure():
-    tenant_id       = session.get("azure_tenant_id", "").strip()
-    subscription_id = session.get("azure_subscription_id", "").strip()
+    azure_session_id = session.get("azure_session_id", "")
 
+    if not azure_session_id:
+        return jsonify({
+            "error": "Azure account not connected. Please click 'Connect Azure Account' first."
+        }), 400
+
+    azure_data = get_azure_session(azure_session_id)
+    if not azure_data:
+        return jsonify({
+            "error": "Azure session expired or not found. Please reconnect your Azure account."
+        }), 400
+
+    tenant_id       = azure_data.get("tenant_id", "")
+    subscription_id = azure_data.get("subscription_id", "")
+
+    # Allow subscription override for multi-subscription accounts
     data = request.get_json(silent=True) or {}
     if data.get("subscription_id"):
         subscription_id = data["subscription_id"].strip()
+        update_azure_subscription(azure_session_id, subscription_id)
         session["azure_subscription_id"] = subscription_id
 
     if not tenant_id:
-        return jsonify({"error": "Azure account not connected. Please click 'Connect Azure Account' first."}), 400
+        return jsonify({"error": "No tenant ID found. Please reconnect your Azure account."}), 400
     if not subscription_id:
         return jsonify({"error": "No Azure subscription found. Please reconnect your Azure account."}), 400
 
@@ -346,22 +416,6 @@ def scan_azure():
         azure_score_data = calculate_azure_score(azure_results)
         save_azure_cache(azure_results, azure_score_data)
         return jsonify({"provider": "azure", "results": azure_results, "score_data": azure_score_data})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/ask/azure", methods=["POST"])
-def ask_azure():
-    data  = request.get_json(silent=True) or {}
-    query = data.get("query", "").strip()
-    if not query:
-        return jsonify({"error": "No query provided."}), 400
-    cache = load_azure_cache()
-    if not cache:
-        return jsonify({"error": "No Azure scan results found. Run an Azure scan first."}), 404
-    try:
-        response = handle_query(query, azure_results_for_llm(cache["azure_results"]),
-                                [], cache["azure_score_data"])
-        return jsonify({"response": markdown.markdown(response)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
