@@ -534,8 +534,7 @@ def ask_azure():
     if not cache:
         return jsonify({"error": "No Azure scan results found. Run an Azure scan first."}), 404
     try:
-        response = handle_query(query, azure_results_for_llm(cache["azure_results"]),
-                                [], cache["azure_score_data"])
+        response = handle_query(query, llm_results, [], cache["azure_score_data"], provider="Azure")
         return jsonify({"response": markdown.markdown(response)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -636,8 +635,8 @@ def index():
             cache            = load_scan_cache(current_role_arn)
             if cache:
                 try:
-                    response = markdown.markdown(handle_query(
-                        query, cache["results"], cache["drift"], cache["score_data"]
+                     response = markdown.markdown(handle_query(
+            query, cache["results"], cache["drift"], cache["score_data"], provider="AWS"
                     ))
                 except Exception as e:
                     error = f"Query failed: {str(e)}"
