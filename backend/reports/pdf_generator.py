@@ -8,7 +8,6 @@ from reportlab.platypus import (
 )
 from datetime import datetime, timezone
 
-
 # ── Provider-specific content ──────────────────────────────────────────────────
 
 AWS_TIMELINE = [
@@ -161,7 +160,6 @@ CONTROL_KEY_MAP = {
     "management":    "patching",
 }
 
-
 def _resolve_control_key(control_name):
     """Map a control name string to a CE_QUESTION_MAPPINGS key."""
     name_lower = control_name.lower()
@@ -169,6 +167,78 @@ def _resolve_control_key(control_name):
         if keyword in name_lower:
             return key
     return None
+
+
+# ── Grouping findings by control ───────────────────────────────────────────────
+# `results` arrives keyed one-entry-per-finding (e.g. one NSG, one user) because
+# that's how the scanners emit data. The evidence pack WANTS that granularity —
+# each resource gets its own line, which is correct and unchanged below.
+#
+# The executive summary counts and the CE prep report do NOT want that
+# granularity — they want one entry per CE control (CE1..CE5 — max 5), with
+# status derived from the worst finding in that group. This function produces
+# that grouped view without touching the original `results` dict, so callers
+# can pass the raw dict to generate_control_pdf (for full per-resource detail)
+# and the grouped dict to generate_ce_prep_report (for one block per control).
+
+_STATUS_SEVERITY_ORDER = {"FAIL": 3, "ERROR": 3, "WARN": 2, "PASS": 1, "INFO": 0, "UNKNOWN": 0}
+
+def group_results_by_control(results):
+    """
+    Groups a finding-per-entry results dict into one entry per CE control.
+
+    Returns a new dict keyed by control_key (e.g. "firewall", "user_access"),
+    where each value is a single aggregated finding dict with the same shape
+    the PDF generators expect (status, name, severity, detail, affected_resources,
+    auto_fail) — a drop-in replacement for `results` wherever per-control
+    (not per-resource) granularity is wanted.
+
+    Aggregation rules:
+      - status: the worst status among the group's findings wins
+                (FAIL/ERROR > WARN > PASS > INFO)
+      - auto_fail: True if ANY finding in the group triggered it
+      - detail: each distinct finding's detail text, concatenated
+      - affected_resources: union of every finding's affected resources
+    """
+    groups = {}
+
+    for control_id, data in results.items():
+        name = data.get("name", control_id)
+        control_key = _resolve_control_key(name) or control_id
+
+        if control_key not in groups:
+            groups[control_key] = {
+                "name": data.get("name", control_id),
+                "status": data.get("status", "UNKNOWN"),
+                "severity": data.get("severity", "UNKNOWN"),
+                "auto_fail": False,
+                "detail_parts": [],
+                "affected_resources": [],
+            }
+
+        g = groups[control_key]
+
+        # Worst status wins (FAIL/ERROR > WARN > PASS > INFO)
+        incoming_status = data.get("status", "UNKNOWN")
+        if _STATUS_SEVERITY_ORDER.get(incoming_status, 0) > _STATUS_SEVERITY_ORDER.get(g["status"], 0):
+            g["status"] = incoming_status
+
+        g["auto_fail"] = g["auto_fail"] or data.get("auto_fail", False)
+
+        detail = data.get("plain_english_fail", "") or data.get("detail", "") or data.get("risk", "")
+        if detail and detail not in g["detail_parts"]:
+            g["detail_parts"].append(detail)
+
+        for res in data.get("affected_resources", []):
+            if res not in g["affected_resources"]:
+                g["affected_resources"].append(res)
+
+    # Flatten detail_parts into the single "detail" string both generators expect
+    for g in groups.values():
+        g["detail"] = " ".join(g["detail_parts"])
+        del g["detail_parts"]
+
+    return groups
 
 
 def _build_prep_answer(control_data, control_key, scan_timestamp, affected_resources):
@@ -187,7 +257,7 @@ def _build_prep_answer(control_data, control_key, scan_timestamp, affected_resou
         badge  = "✓ READY TO SUBMIT"
         badge_color = colors.HexColor('#1A7A4A')
 
-    elif status == "FAIL":
+    elif status in ("FAIL", "ERROR"):
         prefix = mapping.get("fail_prefix", "CloudGuardian scan detected an issue:")
         res    = f" Affected resources: {', '.join(affected_resources)}." if affected_resources else ""
         answer = (
@@ -216,7 +286,6 @@ def _build_prep_answer(control_data, control_key, scan_timestamp, affected_resou
 
     return answer, bg, badge, badge_color
 
-
 # ── Main evidence pack ─────────────────────────────────────────────────────────
 
 def generate_control_pdf(results, score_data, provider="AWS",
@@ -225,7 +294,11 @@ def generate_control_pdf(results, score_data, provider="AWS",
     Generate a Cyber Essentials evidence pack PDF.
 
     Args:
-        results:     dict of control results
+        results:     dict of control results, ONE ENTRY PER FINDING (e.g. one
+                     entry per NSG, one entry per user). This is intentional —
+                     the evidence pack's detail section shows full per-resource
+                     granularity. Only the executive summary counts below use
+                     the grouped (per-control) view internally.
         score_data:  dict with score, risk_level, certification_status, auto_fail_triggered
         provider:    "AWS" or "Azure"
         output_path: output file path
@@ -309,10 +382,18 @@ def generate_control_pdf(results, score_data, provider="AWS",
     cert_status         = score_data.get("certification_status", "UNKNOWN")
     auto_fail_triggered = score_data.get("auto_fail_triggered", False)
 
-    passed             = [cid for cid, d in results.items() if d.get("status") == "PASS"]
-    failed             = [cid for cid, d in results.items() if d.get("status") == "FAIL"]
-    warned             = [cid for cid, d in results.items() if d.get("status") == "WARN"]
-    auto_fail_controls = [cid for cid, d in results.items() if d.get("auto_fail", False)]
+    # IMPORTANT: counts below are computed on the GROUPED (per-control) view,
+    # not the raw per-finding `results` dict. This keeps "Controls Passed/
+    # Failed/Warnings" bounded to the actual number of CE controls assessed
+    # (max 5) rather than scaling with the number of resources/users scanned.
+    # A control's overall status is the worst status among its findings — e.g.
+    # if 49 of 50 users pass MFA and one fails, CE3 is counted as FAILED here,
+    # which is the correct compliance read (the control is not fully satisfied).
+    _grouped = group_results_by_control(results)
+    passed             = [cid for cid, d in _grouped.items() if d.get("status") == "PASS"]
+    failed             = [cid for cid, d in _grouped.items() if d.get("status") in ("FAIL", "ERROR")]
+    warned             = [cid for cid, d in _grouped.items() if d.get("status") == "WARN"]
+    auto_fail_controls = [cid for cid, d in _grouped.items() if d.get("auto_fail", False)]
 
     summary_data = [
         ["Metric",                  "Value"],
@@ -334,9 +415,8 @@ def generate_control_pdf(results, score_data, provider="AWS",
         ("BACKGROUND",     (0, 0), (-1, 0),  colors.HexColor('#1F3D6B')),
         ("TEXTCOLOR",      (0, 0), (-1, 0),  colors.white),
         ("FONTNAME",       (0, 0), (-1, 0),  "Helvetica-Bold"),
-        ("FONTSIZE",       (0, 0), (-1, 0),  10),
+        ("FONTSIZE",       (0, 0), (-1, -1), 10),
         ("FONTNAME",       (0, 1), (0, -1),  "Helvetica-Bold"),
-        ("FONTSIZE",       (0, 1), (-1, -1), 10),
         ("TEXTCOLOR",      (0, 1), (-1, -1), colors.HexColor('#1A1A2E')),
         ("GRID",           (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
         ("PADDING",        (0, 0), (-1, -1), 8),
@@ -346,54 +426,29 @@ def generate_control_pdf(results, score_data, provider="AWS",
     story.append(summary_table)
     story.append(Spacer(1, 8))
 
-    # WARN legend
+    if auto_fail_triggered:
+        story.append(Paragraph(
+            "<b>⚠ An auto-fail condition has been triggered.</b> Certification cannot be "
+            "achieved until this is resolved, regardless of other control results.",
+            ParagraphStyle('afwarn', parent=styles['Normal'], fontSize=10,
+                           textColor=colors.white, backColor=colors.HexColor('#A32D2D'),
+                           leftIndent=8, rightIndent=8, spaceBefore=4, spaceAfter=8,
+                           borderPadding=8)
+        ))
+    elif risk == "HIGH":
+        story.append(Paragraph(
+            "One or more HIGH severity issues were identified. These must be addressed "
+            "before Cyber Essentials v3.3 certification can be achieved.",
+            ParagraphStyle('hiwarn', parent=styles['Normal'], fontSize=10,
+                           textColor=colors.HexColor('#A32D2D'), spaceAfter=8)
+        ))
+
     story.append(Paragraph(WARN_LEGEND, legend_style))
 
-    # Auto-fail banner
-    if auto_fail_triggered:
-        clean_ids = [k.rsplit('_', 1)[0] for k in auto_fail_controls]
-        af_data = [[Paragraph(
-            f"⚠ AUTO-FAIL CONDITION DETECTED — Cyber Essentials v3.3 certification is blocked. "
-            f"The following controls triggered automatic failure criteria: {', '.join(clean_ids)}. "
-            f"These must be resolved before certification can be achieved.",
-            ParagraphStyle('afb', parent=styles['Normal'], fontSize=10,
-                           textColor=colors.white, fontName='Helvetica-Bold'))]]
-        af_table = Table(af_data, colWidths=[460])
-        af_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor('#A32D2D')),
-            ("PADDING",    (0, 0), (-1, -1), 10),
-        ]))
-        story.append(af_table)
-        story.append(Spacer(1, 8))
-
-    # Risk interpretation
-    if auto_fail_triggered:
-        meaning = (
-            "One or more AUTO-FAIL conditions have been detected. Under Cyber Essentials v3.3 "
-            "(Danzell, April 2026), these conditions result in immediate certification failure "
-            "regardless of other controls. Immediate remediation is required."
-        )
-    elif risk == "HIGH":
-        meaning = (
-            "One or more HIGH severity issues were identified. These must be addressed before "
-            "Cyber Essentials v3.3 certification can be achieved."
-        )
-    elif risk == "MEDIUM":
-        meaning = (
-            "Some issues were identified that should be improved. Certification may be achievable "
-            "after addressing these findings."
-        )
-    else:
-        meaning = (
-            "No major issues were identified. Your environment demonstrates a strong Cyber "
-            "Essentials v3.3 compliance posture."
-        )
-
-    story.append(Paragraph(meaning, body_style))
-    story.append(HRFlowable(width="100%", thickness=1,
-                             color=colors.HexColor('#CCCCCC'), spaceAfter=8))
-
-    # Control results
+    # Per-finding control evaluation results — INTENTIONALLY one row per
+    # finding (per NSG, per user, etc.), not grouped. This is the evidence
+    # pack's job: show the assessor exactly which resource was checked and
+    # what the result was, at full granularity.
     story.append(Paragraph("Control Evaluation Results", section_style))
     story.append(Paragraph(
         f"The following section details the outcome of each Cyber Essentials v3.3 control "
@@ -652,7 +707,6 @@ def generate_control_pdf(results, score_data, provider="AWS",
     doc.build(story)
     return output_path
 
-
 # ── CE Preparation Report ──────────────────────────────────────────────────────
 
 def generate_ce_prep_report(results, score_data, provider="AWS",
@@ -665,7 +719,14 @@ def generate_ce_prep_report(results, score_data, provider="AWS",
     into the IASME assessment platform.
 
     Args:
-        results:     dict of control results (same shape as generate_control_pdf)
+        results:     dict of control results. CALLERS SHOULD PASS THE GROUPED
+                     VIEW HERE — i.e. group_results_by_control(raw_results) —
+                     not the raw per-finding dict. This function produces
+                     exactly one question block per CE control; if it's handed
+                     a per-finding dict (one entry per NSG, one per user, etc.)
+                     it will duplicate each control's question block once per
+                     finding, which is the behaviour this docstring exists to
+                     prevent. See group_results_by_control() above.
         score_data:  dict with score, risk_level, etc.
         provider:    "AWS" or "Azure"
         output_path: output file path
@@ -784,6 +845,9 @@ def generate_ce_prep_report(results, score_data, provider="AWS",
                              color=colors.HexColor('#2E75B6'), spaceAfter=8))
 
     # ── PER-CONTROL QUESTION MAPPING ─────────────────────────────────────────
+    # `results` here is expected to already be grouped one-entry-per-control
+    # (see function docstring). Each control_id therefore produces exactly
+    # ONE question block, regardless of how many resources/users back it.
     story.append(Paragraph(
         "CE Question Answers — Cloud Controls (Auto-populated from Scan)", section_style))
     story.append(Paragraph(
@@ -798,14 +862,16 @@ def generate_ce_prep_report(results, score_data, provider="AWS",
         affected  = data.get("affected_resources", [])
 
         # Resolve which CE question mapping applies
-        control_key = _resolve_control_key(name)
+        control_key = _resolve_control_key(name) or (
+            control_id if control_id in CE_QUESTION_MAPPINGS else None
+        )
         if not control_key:
             continue
 
         mapping = CE_QUESTION_MAPPINGS[control_key]
 
         # Control section header
-        hdr_bg = (colors.HexColor('#A32D2D') if status == "FAIL"
+        hdr_bg = (colors.HexColor('#A32D2D') if status in ("FAIL", "ERROR")
                   else colors.HexColor('#1A7A4A') if status == "PASS"
                   else colors.HexColor('#7F6000'))
 

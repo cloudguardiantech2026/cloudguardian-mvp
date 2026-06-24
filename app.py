@@ -568,8 +568,8 @@ def download_pdf_ce_prep():
     cache = load_scan_cache(current_role_arn)
     if not cache:
         return "No AWS scan results found. Run a scan first.", 404
-    from backend.reports.pdf_generator import generate_ce_prep_report
-    generate_ce_prep_report(cache["results"], cache["score_data"], provider="AWS")
+    from backend.reports.pdf_generator import generate_ce_prep_report, group_results_by_control
+    generate_ce_prep_report(group_results_by_control(cache["results"]), cache["score_data"], provider="AWS")
     return send_file("backend/reports/cloudguardian_ce_prep_report.pdf",
                      as_attachment=True, download_name="cloudguardian_ce_prep_report_aws.pdf")
 
@@ -578,9 +578,9 @@ def download_pdf_ce_prep_azure():
     cache = load_azure_cache()
     if not cache:
         return "No Azure scan results found. Run an Azure scan first.", 404
-    from backend.reports.pdf_generator import generate_ce_prep_report
+    from backend.reports.pdf_generator import generate_ce_prep_report, group_results_by_control
     llm_shaped = azure_results_for_llm(cache["azure_results"])
-    generate_ce_prep_report(llm_shaped, cache["azure_score_data"], provider="Azure")
+    generate_ce_prep_report(group_results_by_control(llm_shaped), cache["azure_score_data"], provider="Azure")
     return send_file("backend/reports/cloudguardian_ce_prep_report.pdf",
                      as_attachment=True, download_name="cloudguardian_ce_prep_report_azure.pdf")
 
