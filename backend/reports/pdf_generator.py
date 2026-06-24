@@ -395,6 +395,16 @@ def generate_control_pdf(results, score_data, provider="AWS",
     warned             = [cid for cid, d in _grouped.items() if d.get("status") == "WARN"]
     auto_fail_controls = [cid for cid, d in _grouped.items() if d.get("auto_fail", False)]
 
+    # Certification Status (and a couple of other fields) can be a long
+    # sentence — wrapped in Paragraph so ReportLab wraps it across lines
+    # instead of silently clipping it to the column width, which is what
+    # a bare string does in a Table cell.
+    cert_status_para = Paragraph(
+        cert_status,
+        ParagraphStyle('certstat', parent=styles['Normal'], fontSize=10,
+                       textColor=colors.HexColor('#1A1A2E'))
+    )
+
     summary_data = [
         ["Metric",                  "Value"],
         ["Compliance Score",        f"{score}%"],
@@ -405,7 +415,7 @@ def generate_control_pdf(results, score_data, provider="AWS",
         ["Auto-fail Conditions",    str(len(auto_fail_controls)) if auto_fail_controls else "None"],
         ["Cloud Provider",          provider],
         ["Assessment Framework",    "Cyber Essentials v3.3 (Danzell)"],
-        ["Certification Status",    cert_status],
+        ["Certification Status",    cert_status_para],
         ["Scan Timestamp",          scan_timestamp],
         ["Assessment Valid For",    "24 hours from scan time"],
     ]
@@ -822,10 +832,18 @@ def generate_ce_prep_report(results, score_data, provider="AWS",
                    else colors.HexColor('#BA7517') if risk == "MEDIUM"
                    else colors.HexColor('#1A7A4A'))
 
+    # Same wrapping fix as the evidence pack's summary table — a bare string
+    # in a Table cell gets clipped to one line; Paragraph wraps it properly.
+    cert_status_para = Paragraph(
+        cert_status,
+        ParagraphStyle('certstat2', parent=styles['Normal'], fontSize=10,
+                       textColor=colors.HexColor('#1A1A2E'))
+    )
+
     readiness_data = [
         ["Compliance Score",      f"{score}%"],
         ["Risk Level",            risk],
-        ["Certification Status",  cert_status],
+        ["Certification Status",  cert_status_para],
         ["Auto-fail Triggered",   "YES — immediate action required" if auto_fail_triggered else "No"],
         ["Scan Timestamp",        scan_timestamp],
     ]
