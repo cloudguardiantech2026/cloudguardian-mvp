@@ -142,22 +142,37 @@ CE_QUESTION_MAPPINGS = {
 
 # Maps control name keywords to CE_QUESTION_MAPPINGS keys
 CONTROL_KEY_MAP = {
-    "firewall":      "firewall",
-    "ce1":           "firewall",
-    "boundary":      "firewall",
-    "secure":        "secure_config",
-    "ce2":           "secure_config",
-    "configuration": "secure_config",
-    "user":          "user_access",
-    "ce3":           "user_access",
-    "access":        "user_access",
-    "mfa":           "user_access",
-    "malware":       "malware",
-    "ce4":           "malware",
-    "defender":      "malware",
-    "patch":         "patching",
-    "ce5":           "patching",
-    "management":    "patching",
+    # Firewall — CE1 (Azure) / CE_3_1 (AWS: "Boundary Firewalls and Internet Gateways")
+    "firewall":       "firewall",
+    "ce1":            "firewall",
+    "boundary":       "firewall",
+
+    # Secure Configuration — CE2 (Azure) / CE_2_1 (AWS: "Secure Configuration")
+    "secure":         "secure_config",
+    "ce2":            "secure_config",
+    "configuration":  "secure_config",
+
+    # User Access / MFA — CE3 (Azure) / CE_1_2 (AWS: "Multi-Factor Authentication")
+    "user":           "user_access",
+    "ce3":            "user_access",
+    "access":         "user_access",
+    "mfa":            "user_access",
+    "multi-factor":   "user_access",   # matches "Multi-Factor Authentication" (AWS)
+    "authentication": "user_access",   # safety net
+    "ce_1_2":         "user_access",   # direct YAML key match
+
+    # Patching — CE5 (Azure) / CE_4_1 (AWS: "Security Update Management")
+    "patch":          "patching",
+    "ce5":            "patching",
+    "update":         "patching",      # matches "Security Update Management" (AWS)
+    "ce_4_1":         "patching",      # direct YAML key match
+
+    # Malware — CE4 (Azure) / CE_5_1 (AWS: "Malware Protection")
+    "malware":        "malware",
+    "ce4":            "malware",
+    "defender":       "malware",
+    "guardduty":      "malware",       # AWS-specific
+    "ce_5_1":         "malware",       # direct YAML key match
 }
 
 def _resolve_control_key(control_name):
