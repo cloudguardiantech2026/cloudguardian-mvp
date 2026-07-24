@@ -296,6 +296,26 @@ def connect_aws():
 def connect_aws_id():
     return jsonify({"external_id": session.get("external_id", "")})
 
+@app.route("/connect/aws/launch", methods=["POST"])
+def connect_aws_launch():
+    """
+    Generates a fresh External ID, stores it in session, and returns
+    both the CloudFormation Quick-Create URL and the External ID as JSON.
+    The frontend opens the URL in a new tab and updates the External ID
+    field directly — avoiding the session context mismatch that occurs
+    when target="_blank" creates a separate browser session context.
+    """
+    external_id = generate_external_id()
+    create_customer(external_id)
+    session["external_id"] = external_id
+    params = {
+        "templateURL":                   CF_TEMPLATE_URL,
+        "stackName":                     "CloudGuardian-Audit-Stack",
+        "param_CloudGuardianExternalId": external_id,
+    }
+    cf_url = f"{CF_QUICK_CREATE_BASE}?{urlencode(params)}"
+    return jsonify({"url": cf_url, "external_id": external_id})
+
 @app.route("/verify/aws", methods=["POST"])
 def verify_aws():
     from backend.scanners.aws_auth import build_session

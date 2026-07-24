@@ -444,9 +444,9 @@
                             pre-configured. Review it, then click <strong>Create stack</strong>.
                             Takes under two minutes.
                         </p>
-                        <a href="/connect/aws" class="btn" style="text-decoration:none;" target="_blank" rel="noopener noreferrer">
+                        <button type="button" class="btn" onclick="launchCloudGuardianAWS()" style="text-decoration:none;">
                             &#x1F680; Launch CloudGuardian in AWS Console
-                        </a>
+                        </button>
                         <p style="color:#8b949e;font-size:0.8rem;margin-top:0.6rem;">
                             Opens AWS in a new tab — keep this page open. Creates a read-only
                             IAM role in your account. No keys generated. Your External ID will
@@ -864,6 +864,34 @@
                     .catch(() => { });
             }, 800);
         }
+
+        // ── Launch CloudGuardian in AWS Console ───────────────────────────────────
+            // Opens the CloudFormation Quick-Create URL in a new tab, then polls
+            // /connect/aws/id to update the External ID field in this tab once
+            // the server has generated a fresh one — fixes the session context
+            // mismatch caused by target="_blank" opening a separate browser context.
+            async function launchCloudGuardianAWS() {
+                // 1. Call /connect/aws to generate a fresh External ID server-side
+                //    and get back the CloudFormation Quick-Create URL to open
+                try {
+                    const resp = await fetch('/connect/aws/launch', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+                    const data = await resp.json();
+                    if (data.url) {
+                        // 2. Open the CloudFormation URL in a new tab
+                        window.open(data.url, '_blank', 'noopener,noreferrer');
+                        // 3. Update the External ID field immediately with the
+                        //    freshly generated value returned from the server
+                        if (data.external_id) {
+                            document.getElementById('input-external-id').value = data.external_id;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to launch AWS Console:', e);
+                }
+            }
 
 
         // ── Inline ARN format validation ──────────────────────────────────────────
