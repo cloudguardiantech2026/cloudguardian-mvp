@@ -859,12 +859,8 @@
     </div><!-- /container -->
 
     <script>
-        // ── Provider switching ─────────────────────────────────────────────────────
-        // ── Terraform download: reveal External ID block after click ─────────────
+        // ── Terraform download: reveal External ID block after click ──────────────
         function handleTfDownload() {
-            // Small delay so the file download initiates before we update the DOM.
-            // The External ID is fetched from the server via the /connect/aws route
-            // which stores it in session — we reload the relevant block via fetch.
             setTimeout(function () {
                 fetch('/connect/aws/id')
                     .then(r => r.json())
@@ -880,32 +876,20 @@
         }
 
         // ── Launch CloudGuardian in AWS Console ───────────────────────────────────
-            // Opens the CloudFormation Quick-Create URL in a new tab, then polls
-            // /connect/aws/id to update the External ID field in this tab once
-            // the server has generated a fresh one — fixes the session context
-            // mismatch caused by target="_blank" opening a separate browser context.
-            
-            
-            async function launchCloudGuardianAWS() {
-            // Open a blank tab SYNCHRONOUSLY first — browsers only allow
-            // window.open() without popup-blocking when called directly from
-            // a user click event, not from inside an async/await callback.
-            // We open a blank tab immediately, then populate its URL once
-            // the server returns the CloudFormation Quick-Create URL.
+        // Opens a blank tab synchronously first (required to avoid popup blockers
+        // in Firefox/Safari), then fetches the CloudFormation URL and External ID
+        // from the server and updates both the new tab and the form fields.
+        async function launchCloudGuardianAWS() {
             const newTab = window.open('', '_blank', 'noopener,noreferrer');
-
             try {
                 const resp = await fetch('/connect/aws/launch', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                 });
                 const data = await resp.json();
-
                 if (data.url && newTab) {
-                    // Navigate the already-open tab to the CloudFormation URL
                     newTab.location.href = data.url;
                 }
-
                 if (data.external_id) {
                     document.getElementById('input-external-id').value = data.external_id;
                     document.getElementById('input-role-arn').value = '';
@@ -913,30 +897,26 @@
                     if (warning) warning.style.display = 'none';
                 }
             } catch (e) {
-                // If fetch fails, close the blank tab rather than leaving
-                // an empty tab open with no content
                 if (newTab) newTab.close();
                 console.error('Failed to launch AWS Console:', e);
             }
         }
 
-
         // ── Inline ARN format validation ──────────────────────────────────────────
-            // Warns the user immediately if they paste a CloudFormation stack ARN
-            // (arn:aws:cloudformation:...) instead of the IAM Role ARN (arn:aws:iam::...)
-            // from the stack's Outputs tab — the single most common onboarding mistake.
-            function validateRoleArn(input) {
-                const val = input.value.trim();
-                const warning = document.getElementById('arn-warning');
-                if (!warning) return;
-                if (val.startsWith('arn:aws:cloudformation:') || val.includes(':stack/')) {
-                    warning.style.display = 'block';
-                } else {
-                    warning.style.display = 'none';
-                }
+        // Warns immediately if a CloudFormation stack ARN is pasted instead of
+        // the IAM Role ARN from the stack Outputs tab.
+        function validateRoleArn(input) {
+            const val = input.value.trim();
+            const warning = document.getElementById('arn-warning');
+            if (!warning) return;
+            if (val.startsWith('arn:aws:cloudformation:') || val.includes(':stack/')) {
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
             }
+        }
 
-            // ── Clear saved AWS connection ─────────────────────────────────────────────
+        // ── Clear saved AWS connection ─────────────────────────────────────────────
         function clearAwsConnection() {
             document.getElementById('input-role-arn').value = '';
             document.getElementById('input-external-id').value = '';
@@ -944,8 +924,6 @@
             if (warning) warning.style.display = 'none';
         }
 
-            // ── Verify AWS connection via STS AssumeRole test ─────────────────────────
-            async function verifyAwsConnection() {
         // ── Verify AWS connection via STS AssumeRole test ─────────────────────────
         async function verifyAwsConnection() {
             const roleArn = document.getElementById('input-role-arn').value.trim();
@@ -973,7 +951,6 @@
                     body: JSON.stringify({ role_arn: roleArn, external_id: externalId }),
                 });
                 const data = await resp.json();
-
                 resultDiv.style.display = 'block';
                 if (data.success) {
                     resultDiv.style.background = '#0d2818';
@@ -998,6 +975,7 @@
             }
         }
 
+        // ── Provider switching ─────────────────────────────────────────────────────
         function switchProvider(provider) {
             document.getElementById('aws-panel').style.display = provider === 'aws' ? 'block' : 'none';
             document.getElementById('azure-panel').style.display = provider === 'azure' ? 'block' : 'none';
@@ -1009,7 +987,6 @@
         async function runAzureScan() {
             const errBox = document.getElementById('azure-error');
             errBox.style.display = 'none';
-
             document.getElementById('azure-scanning').style.display = 'block';
             document.getElementById('azure-results-section').style.display = 'none';
             document.getElementById('azure-score-section').style.display = 'none';
@@ -1033,7 +1010,6 @@
 
                 renderAzureScore(data.score_data || {});
                 renderAzureResults(data.results || []);
-
                 document.getElementById('azure-ask-section').style.display = 'block';
                 document.getElementById('azure-pdf-section').style.display = 'block';
 
@@ -1063,11 +1039,11 @@
                 results.forEach(r => {
                     const statusClass = (r.status || '').toLowerCase();
                     tbody.insertAdjacentHTML('beforeend', `<tr>
-                    <td style="font-size:0.85rem;">${escHtml(r.control || '')}</td>
-                    <td style="color:#e3b341;font-size:0.85rem;font-style:italic;">${escHtml(r.resource || '')}</td>
-                    <td class="${statusClass}" style="white-space:nowrap;">${escHtml(r.status || '')}</td>
-                    <td style="font-size:0.85rem;color:#8b949e;">${escHtml(r.detail || '')}</td>
-                </tr>`);
+                        <td style="font-size:0.85rem;">${escHtml(r.control || '')}</td>
+                        <td style="color:#e3b341;font-size:0.85rem;font-style:italic;">${escHtml(r.resource || '')}</td>
+                        <td class="${statusClass}" style="white-space:nowrap;">${escHtml(r.status || '')}</td>
+                        <td style="font-size:0.85rem;color:#8b949e;">${escHtml(r.detail || '')}</td>
+                    </tr>`);
                 });
             }
             document.getElementById('azure-results-section').style.display = 'block';
@@ -1080,7 +1056,6 @@
             const errBox = document.getElementById('azure-ask-error');
             respBox.style.display = 'none';
             errBox.style.display = 'none';
-
             if (!query) return;
 
             try {
@@ -1090,16 +1065,13 @@
                     body: JSON.stringify({ query })
                 });
                 const data = await res.json();
-
                 if (data.error) {
                     errBox.textContent = '⚠ ' + data.error;
                     errBox.style.display = 'block';
                     return;
                 }
-
                 respBox.innerHTML = data.response;
                 respBox.style.display = 'block';
-
             } catch (err) {
                 errBox.textContent = '⚠ Request failed: ' + err.message;
                 errBox.style.display = 'block';
