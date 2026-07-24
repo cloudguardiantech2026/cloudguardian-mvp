@@ -859,6 +859,49 @@
     </div><!-- /container -->
 
     <script>
+        // ── Pre-fetch External ID on page load ────────────────────────────────────
+        // Ensures the External ID field is always populated before the user clicks
+        // Launch, so window.open() can fire synchronously in the click handler
+        // without any async delay that would trigger popup blockers.
+        let _cfUrl = '';
+
+        function _prefetchLaunchData() {
+            fetch('/connect/aws/launch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.external_id) {
+                        const field = document.getElementById('input-external-id');
+                        if (field && !field.value.trim()) {
+                            field.value = data.external_id;
+                        }
+                    }
+                    if (data.url) {
+                        _cfUrl = data.url;
+                    }
+                })
+                .catch(() => { });
+        }
+
+        // ── Launch CloudGuardian in AWS Console ───────────────────────────────────
+        // window.open() fires synchronously here — no async/await, no fetch,
+        // no popup blocker. The URL was pre-fetched on page load above.
+        function launchCloudGuardianAWS() {
+            if (!_cfUrl) {
+                // Fallback: if pre-fetch hasn't completed yet, alert the user
+                alert('Still loading — please try again in a moment.');
+                return;
+            }
+            // Synchronous open — guaranteed to work in all browsers
+            window.open(_cfUrl, '_blank', 'noopener,noreferrer');
+            // Clear the Role ARN field since this is a fresh connection
+            document.getElementById('input-role-arn').value = '';
+            const warning = document.getElementById('arn-warning');
+            if (warning) warning.style.display = 'none';
+        }
+
         // ── Terraform download: reveal External ID block after click ──────────────
         function handleTfDownload() {
             setTimeout(function () {
@@ -875,36 +918,7 @@
             }, 800);
         }
 
-        // ── Launch CloudGuardian in AWS Console ───────────────────────────────────
-        // Opens a blank tab synchronously first (required to avoid popup blockers
-        // in Firefox/Safari), then fetches the CloudFormation URL and External ID
-        // from the server and updates both the new tab and the form fields.
-        async function launchCloudGuardianAWS() {
-            const newTab = window.open('', '_blank', 'noopener,noreferrer');
-            try {
-                const resp = await fetch('/connect/aws/launch', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                });
-                const data = await resp.json();
-                if (data.url && newTab) {
-                    newTab.location.href = data.url;
-                }
-                if (data.external_id) {
-                    document.getElementById('input-external-id').value = data.external_id;
-                    document.getElementById('input-role-arn').value = '';
-                    const warning = document.getElementById('arn-warning');
-                    if (warning) warning.style.display = 'none';
-                }
-            } catch (e) {
-                if (newTab) newTab.close();
-                console.error('Failed to launch AWS Console:', e);
-            }
-        }
-
         // ── Inline ARN format validation ──────────────────────────────────────────
-        // Warns immediately if a CloudFormation stack ARN is pasted instead of
-        // the IAM Role ARN from the stack Outputs tab.
         function validateRoleArn(input) {
             const val = input.value.trim();
             const warning = document.getElementById('arn-warning');
@@ -922,6 +936,9 @@
             document.getElementById('input-external-id').value = '';
             const warning = document.getElementById('arn-warning');
             if (warning) warning.style.display = 'none';
+            // Re-fetch a fresh External ID and CF URL after clearing
+            _cfUrl = '';
+            _prefetchLaunchData();
         }
 
         // ── Verify AWS connection via STS AssumeRole test ─────────────────────────
@@ -1088,14 +1105,21 @@
             } catch (e) { }
         }
 
-        // Auto-switch to Azure tab if redirected back from OAuth callback
+        // ── Page init ──────────────────────────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', () => {
+            // Auto-switch to Azure tab if redirected back from OAuth
             const params = new URLSearchParams(window.location.search);
             if (params.get('tab') === 'azure' || params.get('azure_connected') === '1') {
                 switchProvider('azure');
             }
+
+            // Azure ask — submit on Enter
             const qi = document.getElementById('azure-query');
             if (qi) qi.addEventListener('keydown', e => { if (e.key === 'Enter') askAzure(); });
+
+            // Pre-fetch the CloudFormation URL + External ID so Launch button
+            // can fire window.open() synchronously without popup-blocking
+            _prefetchLaunchData();
         });
 
         function escHtml(str) {
@@ -1104,6 +1128,7 @@
                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
     </script>
+    
 </body>
 
 </html>
