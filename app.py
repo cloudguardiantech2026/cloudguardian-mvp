@@ -305,9 +305,14 @@ def connect_aws_launch():
     field directly — avoiding the session context mismatch that occurs
     when target="_blank" creates a separate browser session context.
     """
-    external_id = generate_external_id()
-    create_customer(external_id)
-    session["external_id"] = external_id
+    # Only generate a new External ID if one doesn't already exist in the
+    # session — prevents page reloads from rotating the External ID and
+    # invalidating an existing stack's trust policy underneath it.
+    external_id = session.get("external_id", "")
+    if not external_id:
+        external_id = generate_external_id()
+        create_customer(external_id)
+        session["external_id"] = external_id
     params = {
         "templateURL":                   CF_TEMPLATE_URL,
         "stackName":                     "CloudGuardian-Audit-Stack",
@@ -315,6 +320,13 @@ def connect_aws_launch():
     }
     cf_url = f"{CF_QUICK_CREATE_BASE}?{urlencode(params)}"
     return jsonify({"url": cf_url, "external_id": external_id})
+
+
+@app.route("/connect/aws/clear", methods=["POST"])
+def connect_aws_clear():
+    """Clears the External ID from session so the next Launch generates a fresh one."""
+    session.pop("external_id", None)
+    return jsonify({"success": True})
 
 @app.route("/verify/aws", methods=["POST"])
 def verify_aws():
