@@ -611,6 +611,14 @@
                                             systems potentially reachable from outside your network.</li>
                                         {% elif signal == "PUBLIC_ROUTE_EXISTS" %}<li>A public network route exists that
                                             could expose internal systems to internet traffic.</li>
+                                        {% elif signal == "GUARDDUTY_DISABLED" %}<li>Amazon GuardDuty is not enabled — your AWS environment has no active threat detection or malware protection monitoring.</li>
+                                        {% elif signal == "GUARDDUTY_ACTIVE_MALWARE_FINDING" %}<li>GuardDuty has detected active malware in your environment that has not been remediated — this represents an ongoing security incident.</li>
+                                        {% elif signal == "GUARDDUTY_S3_PROTECTION_DISABLED" %}<li>GuardDuty S3 Protection is not enabled — files uploaded to your storage buckets are not being scanned for malware.</li>
+                                        {% elif signal == "UNPATCHED_CRITICAL_INSTANCE" %}<li>One or more systems have critical security updates that have not been applied within 14 days of release.</li>
+                                        {% elif signal == "UNMANAGED_SSM_INSTANCE" %}<li>One or more instances cannot be verified for patch compliance — they are not enrolled in AWS Systems Manager.</li>
+                                        {% elif signal == "EOL_OS_DETECTED" %}<li>One or more instances are running an end-of-life operating system that no longer receives security updates.</li>
+                                        {% elif signal == "SG_MYSQL_OPEN" %}<li>A database port (MySQL 3306) is open to the entire internet — this exposes your data to unauthorised access attempts.</li>
+                                        {% elif signal == "SG_POSTGRES_OPEN" %}<li>A database port (PostgreSQL 5432) is open to the entire internet — this exposes your data to unauthorised access attempts.</li>
                                         {% else %}<li>{{ signal }}</li>
                                         {% endif %}
                                         {% endfor %}
@@ -1128,7 +1136,7 @@
                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
     </script>
-    
+
 </body>
 
 </html>
