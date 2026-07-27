@@ -269,7 +269,7 @@ def _build_prep_answer(control_data, control_key, scan_timestamp, affected_resou
             f"This control is currently passing."
         )
         bg     = colors.HexColor('#E8F5EE')
-        badge  = "✓ READY TO SUBMIT"
+        badge  = "READY TO SUBMIT"
         badge_color = colors.HexColor('#1A7A4A')
 
     elif status in ("FAIL", "ERROR"):
@@ -280,7 +280,7 @@ def _build_prep_answer(control_data, control_key, scan_timestamp, affected_resou
             f"Scan performed: {scan_timestamp}. This issue must be resolved before answering Yes."
         )
         bg     = colors.HexColor('#FDEAEA')
-        badge  = "✗ NEEDS ATTENTION BEFORE SUBMITTING"
+        badge  = "NEEDS ATTENTION BEFORE SUBMITTING"
         badge_color = colors.HexColor('#A32D2D')
 
     elif status == "WARN":
@@ -290,13 +290,13 @@ def _build_prep_answer(control_data, control_key, scan_timestamp, affected_resou
             f"Scan performed: {scan_timestamp}. Investigate this finding before submitting."
         )
         bg     = colors.HexColor('#FFF8E7')
-        badge  = "⚠ INVESTIGATE BEFORE SUBMITTING"
+        badge  = "INVESTIGATE BEFORE SUBMITTING"
         badge_color = colors.HexColor('#7F6000')
 
     else:
         answer      = f"No data available for this control. Run a CloudGuardian scan to generate an answer."
         bg          = colors.HexColor('#F5F5F5')
-        badge       = "— NO DATA"
+        badge       = "NO DATA"
         badge_color = colors.HexColor('#888888')
 
     return answer, bg, badge, badge_color
